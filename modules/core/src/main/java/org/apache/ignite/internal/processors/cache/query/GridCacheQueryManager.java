@@ -774,18 +774,14 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
         final ExpiryPolicy plc = cctx.expiry();
 
-        final boolean includeBackups = qry.includeBackups() || cctx.isReplicated();
-
-        Set<Integer> parts = includeBackups ? null :
-            cctx.affinity().primaryPartitions(cctx.nodeId(), cctx.affinity().affinityTopologyVersion());
+        final boolean backups = qry.includeBackups() || cctx.isReplicated();
 
         final GridCloseableIteratorAdapter<IgniteBiTuple<K, V>> heapIt = new GridCloseableIteratorAdapter<IgniteBiTuple<K, V>>() {
             private IgniteBiTuple<K, V> next;
 
             private IgniteCacheExpiryPolicy expiryPlc = cctx.cache().expiryPolicy(plc);
 
-            private Iterator<K> iter = includeBackups ?
-                prj.keySet().iterator() : prj.primaryKeySet().iterator();
+            private Iterator<K> iter = backups ? prj.keySet().iterator() : prj.primaryKeySet().iterator();
 
             {
                 advance();
@@ -881,12 +877,12 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             iters.add(heapIt);
 
             if (cctx.isOffHeapEnabled())
-                iters.add(offheapIterator(qry, includeBackups));
+                iters.add(offheapIterator(qry, backups));
 
             if (cctx.swap().swapEnabled())
-                iters.add(swapIterator(qry, parts));
+                iters.add(swapIterator(qry, backups));
 
-            it = new CompoundIterator<>(iters);
+            it = U.compoudIterator(iters);
         }
         else
             it = heapIt;
@@ -918,47 +914,38 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
     /**
      * @param qry Query.
-     * @param parts Collection of partitions.
+     * @param backups Include backups.
      * @return Swap iterator.
      * @throws IgniteCheckedException If failed.
      */
-    private GridIterator<IgniteBiTuple<K, V>> swapIterator(GridCacheQueryAdapter<?> qry, Collection<Integer> parts)
+    private GridIterator<IgniteBiTuple<K, V>> swapIterator(GridCacheQueryAdapter<?> qry, boolean backups)
         throws IgniteCheckedException {
         IgniteBiPredicate<K, V> filter = qry.scanFilter();
 
         Iterator<Map.Entry<byte[], byte[]>> it;
 
-        if (parts == null)
-            it = cctx.swap().rawSwapIterator();
-        else {
-            List<GridIterator<Map.Entry<byte[], byte[]>>> partIts = new ArrayList<>();
-
-            for (Integer part : parts)
-                partIts.add(cctx.swap().rawSwapIterator(part));
-
-            it = new CompoundIterator(partIts);
-        }
+        it = cctx.swap().rawSwapIterator(true, backups);
 
         return scanIterator(it, filter, qry.keepPortable());
     }
 
     /**
      * @param qry Query.
-     * @param includeBackups IncludeBackups.
+     * @param backups Include backups.
      * @return Offheap iterator.
      * @throws IgniteCheckedException If failed.
      */
-    private GridIterator<IgniteBiTuple<K, V>> offheapIterator(GridCacheQueryAdapter<?> qry, boolean includeBackups)
+    private GridIterator<IgniteBiTuple<K, V>> offheapIterator(GridCacheQueryAdapter<?> qry, boolean backups)
         throws IgniteCheckedException {
         IgniteBiPredicate<K, V> filter = qry.scanFilter();
 
         if (cctx.offheapTiered() && filter != null) {
             OffheapIteratorClosure c = new OffheapIteratorClosure(filter, qry.keepPortable());
 
-            return cctx.swap().rawOffHeapIterator(c, true, includeBackups);
+            return cctx.swap().rawOffHeapIterator(c, true, backups);
         }
         else {
-            Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawOffHeapIterator(true, includeBackups);
+            Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawOffHeapIterator(true, backups);
 
             return scanIterator(it, filter, qry.keepPortable());
         }
@@ -2522,67 +2509,6 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                 return null;
 
             return new IgniteBiTuple<>(e.key(), (V)cctx.unwrapTemporary(e.value())) ;
-        }
-    }
-
-    /**
-     *
-     */
-    private static class CompoundIterator<T> extends GridIteratorAdapter<T> {
-        /** */
-        private static final long serialVersionUID = 4585888051556166304L;
-
-        /** */
-        private final List<GridIterator<T>> iters;
-
-        /** */
-        private int idx;
-
-        /** */
-        private GridIterator<T> iter;
-
-        /**
-         * @param iters Iterators.
-         */
-        private CompoundIterator(List<GridIterator<T>> iters) {
-            if (iters.isEmpty())
-                throw new IllegalArgumentException();
-
-            this.iters = iters;
-
-            iter = F.first(iters);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean hasNextX() throws IgniteCheckedException {
-            if (iter.hasNextX())
-                return true;
-
-            idx++;
-
-            while(idx < iters.size()) {
-                iter = iters.get(idx);
-
-                if (iter.hasNextX())
-                    return true;
-
-                idx++;
-            }
-
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public T nextX() throws IgniteCheckedException {
-            if (!hasNextX())
-                throw new NoSuchElementException();
-
-            return iter.nextX();
-        }
-
-        /** {@inheritDoc} */
-        @Override public void removeX() throws IgniteCheckedException {
-            throw new UnsupportedOperationException();
         }
     }
 

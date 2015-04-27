@@ -1227,7 +1227,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             return rawOffHeapIterator(true, true);
 
         if (swapEnabled() && !offHeapEnabled())
-            return rawSwapIterator();
+            return rawSwapIterator(true, true);
 
         // Both, swap and off-heap are enabled.
         return new GridCloseableIteratorAdapter<Map.Entry<byte[], byte[]>>() {
@@ -1254,7 +1254,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
                 if (offheapFlag) {
                     offheapFlag = false;
 
-                    it = rawSwapIterator();
+                    it = rawSwapIterator(true, true);
 
                     if (!it.hasNext()) {
                         it.close();
@@ -1604,13 +1604,13 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      */
     private int[] partitions(boolean primary, boolean backup) {
         if (primary && backup)
-            return cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode());
+            return cctx.grid().affinity(cctx.name()).allPartitions(cctx.localNode());
 
         if (primary)
-            return cctx.grid().affinity(cctx.name()).primaryPartitions(cctx.grid().localNode());
+            return cctx.grid().affinity(cctx.name()).primaryPartitions(cctx.localNode());
 
         if (backup)
-            return cctx.grid().affinity(cctx.name()).backupPartitions(cctx.grid().localNode());
+            return cctx.grid().affinity(cctx.name()).backupPartitions(cctx.localNode());
 
         return new int[0];
     }
@@ -1635,15 +1635,27 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
     /**
      * @return Raw off-heap iterator.
+     * @param primary Include primaries.
+     * @param backup Include backups.
      * @throws IgniteCheckedException If failed.
      */
-    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawSwapIterator() throws IgniteCheckedException {
-        if (!swapEnabled)
+    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawSwapIterator(boolean primary, boolean backup) throws IgniteCheckedException {
+        if (!swapEnabled || (!primary && !backup))
             return new GridEmptyCloseableIterator<>();
 
         checkIteratorQueue();
 
-        return swapMgr.rawIterator(spaceName);
+        if (primary && backup)
+            return swapMgr.rawIterator(spaceName);
+
+        int[] parts = partitions(primary, backup);
+
+        List<GridIterator<Map.Entry<byte[], byte[]>>> iterators = new ArrayList<>();
+
+        for (int i = 0; i < parts.length; ++i)
+           iterators.add(swapMgr.rawIterator(spaceName, parts[i]));
+
+        return U.compoudIterator(iterators);
     }
 
     /**
