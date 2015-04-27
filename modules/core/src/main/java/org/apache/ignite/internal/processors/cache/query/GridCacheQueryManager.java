@@ -774,7 +774,9 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
         final ExpiryPolicy plc = cctx.expiry();
 
-        Set<Integer> parts = qry.includeBackups() || cctx.isReplicated() ? null :
+        final boolean includeBackups = qry.includeBackups() || cctx.isReplicated();
+
+        Set<Integer> parts = includeBackups ? null :
             cctx.affinity().primaryPartitions(cctx.nodeId(), cctx.affinity().affinityTopologyVersion());
 
         final GridCloseableIteratorAdapter<IgniteBiTuple<K, V>> heapIt = new GridCloseableIteratorAdapter<IgniteBiTuple<K, V>>() {
@@ -782,7 +784,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
             private IgniteCacheExpiryPolicy expiryPlc = cctx.cache().expiryPolicy(plc);
 
-            private Iterator<K> iter = qry.includeBackups() || cctx.isReplicated() ?
+            private Iterator<K> iter = includeBackups ?
                 prj.keySet().iterator() : prj.primaryKeySet().iterator();
 
             {
@@ -879,7 +881,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             iters.add(heapIt);
 
             if (cctx.isOffHeapEnabled())
-                iters.add(offheapIterator(qry, parts));
+                iters.add(offheapIterator(qry, includeBackups));
 
             if (cctx.swap().swapEnabled())
                 iters.add(swapIterator(qry, parts));
@@ -942,21 +944,21 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
     /**
      * @param qry Query.
-     * @param parts Collection of partitions.
+     * @param includeBackups IncludeBackups.
      * @return Offheap iterator.
      * @throws IgniteCheckedException If failed.
      */
-    private GridIterator<IgniteBiTuple<K, V>> offheapIterator(GridCacheQueryAdapter<?> qry, Collection<Integer> parts)
+    private GridIterator<IgniteBiTuple<K, V>> offheapIterator(GridCacheQueryAdapter<?> qry, boolean includeBackups)
         throws IgniteCheckedException {
         IgniteBiPredicate<K, V> filter = qry.scanFilter();
 
         if (cctx.offheapTiered() && filter != null) {
             OffheapIteratorClosure c = new OffheapIteratorClosure(filter, qry.keepPortable());
 
-            return cctx.swap().rawOffHeapIterator(c, true, parts == null);
+            return cctx.swap().rawOffHeapIterator(c, true, includeBackups);
         }
         else {
-            Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawOffHeapIterator(true, parts == null);
+            Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawOffHeapIterator(true, includeBackups);
 
             return scanIterator(it, filter, qry.keepPortable());
         }

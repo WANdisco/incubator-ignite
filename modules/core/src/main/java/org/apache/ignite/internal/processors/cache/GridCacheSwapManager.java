@@ -1614,16 +1614,6 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         return new int[0];
     }
-    /**
-     * @param part Partition.
-     * @return Raw off-heap iterator.
-     */
-    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawOffHeapIterator(final int part) {
-        if (!offheapEnabled)
-            return new GridEmptyCloseableIterator<>();
-
-        return new OffHeapIterator(offheap.iterator(spaceName, new int[]{part}));
-    }
 
     /**
      * Gets swap space iterator over partition.
