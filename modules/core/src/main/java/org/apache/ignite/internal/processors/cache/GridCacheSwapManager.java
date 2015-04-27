@@ -1224,7 +1224,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         checkIteratorQueue();
 
         if (offHeapEnabled() && !swapEnabled())
-            return rawOffHeapIterator();
+            return rawOffHeapIterator(true, true);
 
         if (swapEnabled() && !offHeapEnabled())
             return rawSwapIterator();
@@ -1240,7 +1240,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             private Map.Entry<byte[], byte[]> cur;
 
             {
-                it = rawOffHeapIterator();
+                it = rawOffHeapIterator(true, true);
 
                 advance();
             }
@@ -1569,30 +1569,51 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
     /**
      * @param c Key/value closure.
+     * @param primary Include primaries.
+     * @param backup Include backups.
      * @return Off-heap iterator.
      */
-    public <T> GridCloseableIterator<T> rawOffHeapIterator(CX2<T2<Long, Integer>, T2<Long, Integer>, T> c) {
+    public <T> GridCloseableIterator<T> rawOffHeapIterator(CX2<T2<Long, Integer>, T2<Long, Integer>, T> c,
+                                                           boolean primary, boolean backup) {
         assert c != null;
 
-        if (!offheapEnabled)
+        if (!offheapEnabled || (!primary && !backup))
             return new GridEmptyCloseableIterator<>();
 
         checkIteratorQueue();
 
-        return offheap.iterator(spaceName, c, cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode()));
+        return offheap.iterator(spaceName, c, partitions(primary, backup));
     }
 
     /**
+     * @param primary Include primaries.
+     * @param backup Include backups.
      * @return Raw off-heap iterator.
      */
-    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawOffHeapIterator() {
-        if (!offheapEnabled)
+    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawOffHeapIterator(boolean primary, boolean backup) {
+        if (!offheapEnabled || (!primary && !backup))
             return new GridEmptyCloseableIterator<>();
 
-        return new OffHeapIterator(offheap.iterator(spaceName,
-            cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode())));
+        return new OffHeapIterator(offheap.iterator(spaceName,partitions(primary, backup)));
     }
 
+    /**
+     * @param primary Include primaries.
+     * @param backup Include backups.
+     * @return Partitions.
+     */
+    private int[] partitions(boolean primary, boolean backup) {
+        if (primary && backup)
+            return cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode());
+
+        if (primary)
+            return cctx.grid().affinity(cctx.name()).primaryPartitions(cctx.grid().localNode());
+
+        if (backup)
+            return cctx.grid().affinity(cctx.name()).backupPartitions(cctx.grid().localNode());
+
+        return new int[0];
+    }
     /**
      * @param part Partition.
      * @return Raw off-heap iterator.

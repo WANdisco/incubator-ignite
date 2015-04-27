@@ -953,21 +953,10 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         if (cctx.offheapTiered() && filter != null) {
             OffheapIteratorClosure c = new OffheapIteratorClosure(filter, qry.keepPortable());
 
-            return cctx.swap().rawOffHeapIterator(c);
+            return cctx.swap().rawOffHeapIterator(c, true, parts == null);
         }
         else {
-            Iterator<Map.Entry<byte[], byte[]>> it;
-
-            if (parts == null)
-                it = cctx.swap().rawOffHeapIterator();
-            else {
-                List<GridIterator<Map.Entry<byte[], byte[]>>> partIts = new ArrayList<>();
-
-                for (Integer part : parts)
-                    partIts.add(cctx.swap().rawOffHeapIterator(part));
-
-                it = new CompoundIterator(partIts);
-            }
+            Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawOffHeapIterator(true, parts == null);
 
             return scanIterator(it, filter, qry.keepPortable());
         }
