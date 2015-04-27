@@ -3834,16 +3834,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /** {@inheritDoc} */
-    @Override public Iterator<Map.Entry<K, V>> swapIterator() throws IgniteCheckedException {
-        return ctx.swap().lazySwapIterator();
-    }
-
-    /** {@inheritDoc} */
-    @Override public Iterator<Map.Entry<K, V>> offHeapIterator() throws IgniteCheckedException {
-        return ctx.swap().lazyOffHeapIterator();
-    }
-
-    /** {@inheritDoc} */
     @Override public long offHeapEntriesCount() {
         return ctx.swap().offHeapEntriesCount();
     }
