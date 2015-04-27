@@ -1321,7 +1321,8 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             return F.emptyIterator();
 
         if (primary && backup)
-            return keyIterator(offheap.iterator(spaceName));
+            return keyIterator(offheap.iterator(spaceName,
+                cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode())));
 
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
@@ -1367,7 +1368,8 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (!offheapEnabled)
             return new GridEmptyCloseableIterator<>();
 
-        return lazyIterator(offheap.iterator(spaceName));
+        return lazyIterator(offheap.iterator(spaceName,
+            cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode())));
     }
 
     /**
@@ -1587,7 +1589,8 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (!offheapEnabled)
             return new GridEmptyCloseableIterator<>();
 
-        return new OffHeapIterator(offheap.iterator(spaceName));
+        return new OffHeapIterator(offheap.iterator(spaceName,
+            cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode())));
     }
 
     /**

@@ -188,9 +188,10 @@ public interface GridOffHeapPartitionedMap {
     /**
      * Gets iterator over the whole map.
      *
+     * @param parts Partitions.
      * @return Iterator over the whole map.
      */
-    public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator();
+    public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator(int[] parts);
 
     /**
      * Gets iterator over the whole map.

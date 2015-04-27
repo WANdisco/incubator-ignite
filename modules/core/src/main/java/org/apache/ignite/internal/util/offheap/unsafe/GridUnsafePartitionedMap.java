@@ -276,7 +276,7 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
     }
 
     /** {@inheritDoc} */
-    @Override public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator() {
+    @Override public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator(final int[] parts) {
         return new GridCloseableIteratorAdapter<IgniteBiTuple<byte[], byte[]>>() {
             private int p;
 
@@ -294,8 +294,8 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
             private void advance() throws IgniteCheckedException {
                 curIt = null;
 
-                while (p < parts) {
-                    curIt = mapFor(p++).iterator();
+                while (p < parts.length) {
+                    curIt = mapFor(parts[p++]).iterator();
 
                     if (curIt.hasNext())
                         return;
