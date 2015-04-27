@@ -44,8 +44,8 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.*;
  *
  */
 public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
-    /** The lowest version of ignite that is compatible with current version. */
-    private static IgniteProductVersion COMPATIBLE_VERSION_SINCE = IgniteProductVersion.fromString("1.1.0");
+    /** Ignite version when message field {@link DataStreamerRequest#topologyVersion()} was added. */
+    private static IgniteProductVersion MSG_TOP_VER_SINCE = IgniteProductVersion.fromString("1.1.0");
 
     /** Loaders map (access is not supposed to be highly concurrent). */
     private Collection<DataStreamerImpl> ldrs = new GridConcurrentHashSet<>();
@@ -195,10 +195,10 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
             AffinityTopologyVersion rmtAffVer = req.topologyVersion();
 
             if (rmtAffVer == null) {
-                ClusterNode rmtNode =  ctx.discovery().node(nodeId);
+                ClusterNode rmtNode = ctx.discovery().node(nodeId);
 
                 if (rmtNode != null)
-                    assert rmtNode.version().compareTo(COMPATIBLE_VERSION_SINCE) < 0;
+                    assert rmtNode.version().compareTo(MSG_TOP_VER_SINCE) < 0 : rmtNode;
             }
             else {
                 if (locAffVer.compareTo(rmtAffVer) < 0) {
@@ -210,11 +210,9 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
 
                     if (fut != null && !fut.isDone()) {
                         fut.listen(new CI1<IgniteInternalFuture<?>>() {
-                            @Override
-                            public void apply(IgniteInternalFuture<?> t) {
+                            @Override public void apply(IgniteInternalFuture<?> t) {
                                 ctx.closure().runLocalSafe(new Runnable() {
-                                    @Override
-                                    public void run() {
+                                    @Override public void run() {
                                         processRequest(nodeId, req);
                                     }
                                 }, false);
