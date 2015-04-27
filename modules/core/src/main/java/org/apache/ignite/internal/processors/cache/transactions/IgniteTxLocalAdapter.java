@@ -2193,7 +2193,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter
                                 drVer,
                                 skipStore);
 
-                            if (!implicit() && readCommitted())
+                            if (!implicit() && readCommitted() && op != DELETE)
                                 cacheCtx.evicts().touch(entry, topologyVersion());
 
                             if (groupLock() && !lockOnly)
@@ -2386,9 +2386,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter
 
             while (true) {
                 GridCacheEntryEx cached = txEntry.cached();
-
-                if (!txEntry.skipStore())
-                    cached.unswap(false);
 
                 try {
                     assert cached.detached() || cached.lockedByThread(threadId) || isRollbackOnly() :

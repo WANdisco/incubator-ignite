@@ -969,7 +969,6 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                 it = new CompoundIterator(partIts);
             }
 
-
             return scanIterator(it, filter, qry.keepPortable());
         }
     }
