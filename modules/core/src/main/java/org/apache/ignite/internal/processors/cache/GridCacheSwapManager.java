@@ -1626,16 +1626,25 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @return Partitions.
      */
     private int[] partitions(boolean primary, boolean backup) {
-        if (primary && backup)
-            return cctx.grid().affinity(cctx.name()).allPartitions(cctx.localNode());
+        AffinityTopologyVersion ver = cctx.affinity().affinityTopologyVersion();
+
+        Set<Integer> parts = null;
+
+        if (primary && backup) {
+            int[] primaryParts = U.toIntArray(cctx.affinity().primaryPartitions(cctx.localNodeId(), ver));
+
+            int[] backupParts = U.toIntArray(cctx.affinity().backupPartitions(cctx.localNodeId(), ver));
+
+            return U.addAll(primaryParts, backupParts);
+        }
 
         if (primary)
-            return cctx.grid().affinity(cctx.name()).primaryPartitions(cctx.localNode());
+            parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), ver);
 
         if (backup)
-            return cctx.grid().affinity(cctx.name()).backupPartitions(cctx.localNode());
+            parts = cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new int[0];
+        return parts != null ? U.toIntArray(parts)  : new int[0];
     }
 
     /**
