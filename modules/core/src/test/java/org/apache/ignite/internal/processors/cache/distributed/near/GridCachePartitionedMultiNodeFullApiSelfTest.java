@@ -175,6 +175,9 @@ public class GridCachePartitionedMultiNodeFullApiSelfTest extends GridCacheParti
      * @throws Exception If failed.
      */
     public void testUnswapShort() throws Exception {
+        if (memoryMode() == CacheMemoryMode.OFFHEAP_TIERED)
+            return;
+
         final AtomicInteger swapEvts = new AtomicInteger(0);
         final AtomicInteger unswapEvts = new AtomicInteger(0);
 
