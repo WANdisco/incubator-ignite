@@ -337,7 +337,7 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
     }
 
     /** {@inheritDoc} */
-    @Override public <T> GridCloseableIterator<T> iterator(final CX2<T2<Long, Integer>, T2<Long, Integer>, T> c) {
+    @Override public <T> GridCloseableIterator<T> iterator(final CX2<T2<Long, Integer>, T2<Long, Integer>, T> c, final int[] parts0) {
         assert c != null;
 
         return new GridCloseableIteratorAdapter<T>() {
@@ -357,8 +357,8 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
             private void advance() throws IgniteCheckedException {
                 curIt = null;
 
-                while (p < parts) {
-                    curIt = mapFor(p++).iterator(c);
+                while (p < parts0.length) {
+                    curIt = mapFor(parts0[p++]).iterator(c);
 
                     if (curIt.hasNext())
                         return;

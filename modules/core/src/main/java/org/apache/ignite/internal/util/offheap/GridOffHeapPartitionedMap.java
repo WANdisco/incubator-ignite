@@ -197,9 +197,10 @@ public interface GridOffHeapPartitionedMap {
      * Gets iterator over the whole map.
      *
      * @param c Key/value closure.
+     * @param parts Partitions.
      * @return Iterator over the whole map.
      */
-    public <T> GridCloseableIterator<T> iterator(CX2<T2<Long, Integer>, T2<Long, Integer>, T> c);
+    public <T> GridCloseableIterator<T> iterator(CX2<T2<Long, Integer>, T2<Long, Integer>, T> c, int[] parts);
 
     /**
      * Sets callback for when entries are evicted due to memory constraints.

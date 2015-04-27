@@ -1579,7 +1579,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         checkIteratorQueue();
 
-        return offheap.iterator(spaceName, c);
+        return offheap.iterator(spaceName, c, cctx.grid().affinity(cctx.name()).allPartitions(cctx.grid().localNode()));
     }
 
     /**
