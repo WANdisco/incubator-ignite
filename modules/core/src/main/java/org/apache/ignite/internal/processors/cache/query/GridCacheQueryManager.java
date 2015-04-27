@@ -933,10 +933,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * @param qry Query.
      * @param backups Include backups.
      * @return Offheap iterator.
-     * @throws IgniteCheckedException If failed.
      */
-    private GridIterator<IgniteBiTuple<K, V>> offheapIterator(GridCacheQueryAdapter<?> qry, boolean backups)
-        throws IgniteCheckedException {
+    private GridIterator<IgniteBiTuple<K, V>> offheapIterator(GridCacheQueryAdapter<?> qry, boolean backups) {
         IgniteBiPredicate<K, V> filter = qry.scanFilter();
 
         if (cctx.offheapTiered() && filter != null) {
