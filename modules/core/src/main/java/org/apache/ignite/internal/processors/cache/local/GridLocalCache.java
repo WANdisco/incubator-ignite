@@ -146,8 +146,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
                     try {
                         entry = entryExx(key);
 
-                        if (ctx.offheapTiered())
-                            entry.unswap(false);
+                        entry.unswap(false);
 
                         if (!ctx.isAll(entry, filter)) {
                             fut.onFailed();
@@ -200,22 +199,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
                 ctx.evicts().touch(entry, topVer);
             }
         }
-    }
-
-    /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
-    @Override public void removeAll() throws IgniteCheckedException {
-        Set<K> keys = new HashSet<>();
-
-        if (ctx.offheapTiered()) {
-            for (Iterator<KeyCacheObject> it = ctx.swap().offHeapKeyIterator(true, true, AffinityTopologyVersion.NONE);
-                 it.hasNext(); )
-                keys.add((K)it.next().value(ctx.cacheObjectContext(), false));
-        }
-
-        keys.addAll(keySet());
-
-        removeAll(keys);
     }
 
     /** {@inheritDoc} */
