@@ -399,11 +399,6 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
         };
     }
 
-    /** {@inheritDoc} */
-    @Override public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator(int p) {
-        return mapFor(p).iterator();
-    }
-
     /**
      * Gets number of LRU stripes.
      *

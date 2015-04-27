@@ -1331,7 +1331,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             @Override protected Iterator<KeyCacheObject> partitionIterator(int part)
                 throws IgniteCheckedException
             {
-                return keyIterator(offheap.iterator(spaceName, part));
+                return keyIterator(offheap.iterator(spaceName, new int[]{part}));
             }
         };
     }
@@ -1564,7 +1564,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         checkIteratorQueue();
 
-        return new IteratorWrapper(offheap.iterator(spaceName, part));
+        return new IteratorWrapper(offheap.iterator(spaceName, new int[]{part}));
     }
 
     /**
@@ -1601,7 +1601,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (!offheapEnabled)
             return new GridEmptyCloseableIterator<>();
 
-        return new OffHeapIterator(offheap.iterator(spaceName, part));
+        return new OffHeapIterator(offheap.iterator(spaceName, new int[]{part}));
     }
 
     /**
@@ -1702,7 +1702,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         return new PartitionsIterator<K, V>(parts) {
             @Override protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> partitionIterator(int part) {
-                return offheap.iterator(spaceName, part);
+                return offheap.iterator(spaceName, new int[]{part});
             }
         };
     }

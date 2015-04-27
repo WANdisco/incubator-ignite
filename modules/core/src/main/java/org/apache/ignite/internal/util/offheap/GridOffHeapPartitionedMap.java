@@ -202,14 +202,6 @@ public interface GridOffHeapPartitionedMap {
     public <T> GridCloseableIterator<T> iterator(CX2<T2<Long, Integer>, T2<Long, Integer>, T> c);
 
     /**
-     * Gets iterator over certain partition.
-     *
-     * @param p Partition.
-     * @return Iterator over certain partition.
-     */
-    public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator(int p);
-
-    /**
      * Sets callback for when entries are evicted due to memory constraints.
      * The parameter into closure is key bytes.
      *
