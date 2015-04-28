@@ -39,9 +39,8 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
     /**
     * @throws Exception If failed.
     */
-    public void testPutRemoveWithSkipStore() throws Exception {
+    public void testPutRemove() throws Exception {
         IgniteCache<String, Integer> cache = grid(0).cache(null);
-        IgniteCache<String, Integer> cacheSkipStore = cache.withSkipStore();
 
         String key = "key_" + 4;
 
@@ -52,16 +51,14 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
         assertFalse(grid(0).affinity(null).isPrimary(grid(0).localNode(), key));
         assertFalse(grid(0).affinity(null).isBackup(grid(0).localNode(), key));
 
-        assertNull(cacheSkipStore.get(key));
         assertEquals(4, cache.get(key).intValue());
         assertNull(primaryCache.localPeek(key, CachePeekMode.ONHEAP));
         assertEquals(4, primaryCache.localPeek(key, CachePeekMode.OFFHEAP).intValue());
 
-        cacheSkipStore.put(key, 5);
+        cache.put(key, 5);
 
         assertEquals(5, primaryCache.localPeek(key, CachePeekMode.ONHEAP).intValue());
         assertEquals(5, primaryCache.localPeek(key, CachePeekMode.OFFHEAP).intValue());
-        assertEquals(5, cacheSkipStore.get(key).intValue());
         assertEquals(5, cache.get(key).intValue());
         assertEquals(4, map.get(key));
 
