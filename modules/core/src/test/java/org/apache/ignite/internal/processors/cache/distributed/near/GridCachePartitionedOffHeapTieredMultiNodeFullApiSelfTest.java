@@ -49,7 +49,7 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
         IgniteCache cache = grid(0).cache(null);
 
         for (int i = 4; i < 5; ++i) {
-            String key = "key_" + 1;
+            String key = "key_" + 4;
             System.out.println("key = " + key);
 
             cache.put(key, i);
