@@ -4310,6 +4310,126 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
     /**
      * @throws Exception If failed.
      */
+    public void testPutRemoveWithSkipStore() throws Exception {
+        IgniteCache<String, Integer> cache = grid(0).cache(null);
+        IgniteCache<String, Integer> cacheSkipStore = cache.withSkipStore();
+
+        String key = "key_" + 4;
+
+        cache.put(key, 4);
+
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("!Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("!On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("!Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, OFFHEAP));
+            System.out.println("!Swap " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.SWAP));
+            System.out.println("!Near " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.NEAR));
+            System.out.println("!Primary " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("!Backup " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.BACKUP));
+        }
+
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("1Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("1On heap "  + grid(i).cache(null).localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("1Off heap "  + grid(i).cache(null).localPeek(key, OFFHEAP));
+            System.out.println("1Swap " + grid(i).cache(null).localPeek(key, CachePeekMode.SWAP));
+            System.out.println("1Near " + grid(i).cache(null).localPeek(key, CachePeekMode.NEAR));
+            System.out.println("1Primary " + grid(i).cache(null).localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("1Backup " + grid(i).cache(null).localPeek(key, CachePeekMode.BACKUP));
+        }
+
+
+        assertEquals(4, cacheSkipStore.get(key).intValue());
+        assertEquals(4, cache.get(key).intValue());
+        assertEquals(4, map.get(key));
+        cacheSkipStore.remove(key);
+
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("!!Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("!!On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("!!Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, OFFHEAP));
+            System.out.println("!!Swap " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.SWAP));
+            System.out.println("!!Near " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.NEAR));
+            System.out.println("!!Primary " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("!!Backup " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.BACKUP));
+        }
+
+        assertNull(cacheSkipStore.get(key));
+        assertEquals(4, cache.get(key).intValue());
+        assertEquals(4, map.get(key));
+
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("3Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("3On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("3Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, OFFHEAP));
+            System.out.println("3Swap " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.SWAP));
+            System.out.println("3Near " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.NEAR));
+            System.out.println("3Primary " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("3Backup " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.BACKUP));
+        }
+
+        cacheSkipStore.put(key, 5);
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("!!!Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("!!!On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("!!!Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, OFFHEAP));
+            System.out.println("!!!Swap " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.SWAP));
+            System.out.println("!!!Near " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.NEAR));
+            System.out.println("!!!Primary " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("!!!Backup " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.BACKUP));
+        }
+
+        assertEquals(5, cacheSkipStore.get(key).intValue());
+        assertEquals(5, cache.get(key).intValue());
+        assertEquals(4, map.get(key));
+
+        map.put(key, 6);
+
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("4Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("4On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("4Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, OFFHEAP));
+            System.out.println("4Swap " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.SWAP));
+            System.out.println("4Near " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.NEAR));
+            System.out.println("4Primary " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("4Backup " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.BACKUP));
+        }
+
+
+        assertTrue(cacheSkipStore.remove(key));
+
+        for (int i = 0; i < gridCount(); ++i) {
+            System.out.println("Grid " + i +
+                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
+                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
+            System.out.println("On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
+            System.out.println("Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, OFFHEAP));
+            System.out.println("Swap " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.SWAP));
+            System.out.println("Near " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.NEAR));
+            System.out.println("Primary " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.PRIMARY));
+            System.out.println("Backup " + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.BACKUP));
+        }
+
+        assertNull(cacheSkipStore.get(key));
+        assertEquals(6, cache.get(key).intValue());
+        assertNotNull(map.get(key));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
     public void testWithSkipStore() throws Exception {
         IgniteCache<String, Integer> cache = grid(0).cache(null);
 

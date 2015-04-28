@@ -827,7 +827,12 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      */
     public GridCacheEntryEx entryEx(KeyCacheObject key, AffinityTopologyVersion topVer) {
         GridCacheEntryEx e = entry0(key, topVer, true, false);
-
+        try {
+            e.unswap();
+        }
+        catch (IgniteCheckedException e1) {
+            e1.printStackTrace();
+        }
         assert e != null;
 
         return e;
