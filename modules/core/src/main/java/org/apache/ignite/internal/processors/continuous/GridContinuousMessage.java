@@ -85,7 +85,7 @@ public class GridContinuousMessage implements Message {
         this.futId = futId;
 
         if (msgs)
-            this.msgs = (Collection)data;
+            this.msgs = (Collection<Message>)data;
         else
             this.data = data;
     }
