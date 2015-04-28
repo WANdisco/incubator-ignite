@@ -42,7 +42,20 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
     public void testPutRemove() throws Exception {
         IgniteCache<String, Integer> cache = grid(0).cache(null);
 
-        String key = "key_" + 4;
+        assert gridCount() > 3;
+        String key = null;
+
+        for (int i = 0; i < 250; ++i) {
+            String testKey = "key_" + i;
+
+            if (!grid(0).affinity(null).isPrimaryOrBackup(grid(0).localNode(), testKey)) {
+                key = testKey;
+
+                break;
+            }
+        }
+
+        assert key != null;
 
         map.put(key, 4);
 
@@ -60,90 +73,6 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
         assertEquals(5, primaryCache.localPeek(key, CachePeekMode.ONHEAP).intValue());
         assertEquals(5, primaryCache.localPeek(key, CachePeekMode.OFFHEAP).intValue());
         assertEquals(5, cache.get(key).intValue());
-        assertEquals(4, map.get(key));
-
-        /*
-
-        cache.put(key, 4);
-
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put : Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put : On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put : Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.OFFHEAP));
-        }
-
-        assertEquals(4, cacheSkipStore.get(key).intValue());
-        assertEquals(4, cache.get(key).intValue());
-        assertEquals(4, map.get(key));
-
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put + get: Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put + get: On heap "  + grid(i).cache(null).localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put + get: Off heap "  + grid(i).cache(null).localPeek(key, CachePeekMode.OFFHEAP));
-        }
-        cacheSkipStore.remove(key);
-
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put + get + remove: Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put + get + remove: On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put + get + remove: Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.OFFHEAP));
-        }
-
-        assertNull(cacheSkipStore.get(key));
-        assertEquals(4, cache.get(key).intValue());
-        assertEquals(4, map.get(key));
-
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put + get + remove + get: Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put + get + remove + get: On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put + get + remove + get: Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.OFFHEAP));
-        }
-
-        cacheSkipStore.put(key, 5);
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put + get + remove + get + put: Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put + get + remove + get + put: On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put + get + remove + get + put: Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.OFFHEAP));
-        }
-
-        assertEquals(5, cacheSkipStore.get(key).intValue());
-        assertEquals(5, cache.get(key).intValue());
-        assertEquals(4, map.get(key));
-
-        map.put(key, 6);
-
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put + get + remove + get + put + get: Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put + get + remove + get + put + get: On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put + get + remove + get + put + get: Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.OFFHEAP));
-        }
-
-
-        assertTrue(cacheSkipStore.remove(key));
-
-        for (int i = 0; i < gridCount(); ++i) {
-            System.out.println("After put + get + remove + get + put + get + remove: Grid " + i +
-                " is primary " + grid(0).affinity(null).isPrimary(grid(i).localNode(), key) +
-                " is backup " + grid(0).affinity(null).isBackup(grid(i).localNode(), key));
-            System.out.println("After put + get + remove + get + put + get + remove: On heap "  + grid(i).cache(null).withSkipStore().localPeek(key, ONHEAP_PEEK_MODES));
-            System.out.println("After put + get + remove + get + put + get + remove: Off heap "  + grid(i).cache(null).withSkipStore().localPeek(key, CachePeekMode.OFFHEAP));
-        }
-
-        assertNull(cacheSkipStore.get(key));
-        assertEquals(6, cache.get(key).intValue());
-        assertNotNull(map.get(key));*/
+        assertEquals(5, map.get(key));
     }
-
 }
