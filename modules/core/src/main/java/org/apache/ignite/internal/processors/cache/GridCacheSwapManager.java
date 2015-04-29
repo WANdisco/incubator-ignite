@@ -1321,16 +1321,16 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             return F.emptyIterator();
 
         if (primary && backup)
-            return keyIterator(offheap.iterator(spaceName, partitions(primary, backup)));
+            return keyIterator(offheap.iterator(spaceName));
 
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
 
-        return new PartitionsKeyIterator(parts) {
+        return new PartitionsAbstractIterator<KeyCacheObject>(parts) {
             @Override protected Iterator<KeyCacheObject> partitionIterator(int part)
                 throws IgniteCheckedException
             {
-                return keyIterator(offheap.iterator(spaceName, new int[]{part}));
+                return keyIterator(offheap.iterator(spaceName, part));
             }
         };
     }
@@ -1351,7 +1351,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
 
-        return new PartitionsKeyIterator(parts) {
+        return new PartitionsAbstractIterator<KeyCacheObject>(parts) {
             @Override protected Iterator<KeyCacheObject> partitionIterator(int part)
                 throws IgniteCheckedException
             {
@@ -1367,7 +1367,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (!offheapEnabled)
             return new GridEmptyCloseableIterator<>();
 
-        return lazyIterator(offheap.iterator(spaceName, partitions(true, true)));
+        return lazyIterator(offheap.iterator(spaceName));
     }
 
     /**
@@ -1562,7 +1562,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         checkIteratorQueue();
 
-        return new IteratorWrapper(offheap.iterator(spaceName, new int[]{part}));
+        return new IteratorWrapper(offheap.iterator(spaceName, part));
     }
 
     /**
@@ -1571,7 +1571,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @param backup Include backups.
      * @return Off-heap iterator.
      */
-    public <T> GridCloseableIterator<T> rawOffHeapIterator(CX2<T2<Long, Integer>, T2<Long, Integer>, T> c,
+    public <T> GridCloseableIterator<T> rawOffHeapIterator(final CX2<T2<Long, Integer>, T2<Long, Integer>, T> c,
         boolean primary, boolean backup) {
         assert c != null;
 
@@ -1580,7 +1580,21 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         checkIteratorQueue();
 
-        return offheap.iterator(spaceName, c, partitions(primary, backup));
+        if (primary && backup)
+            return offheap.iterator(spaceName, c);
+
+        AffinityTopologyVersion ver = cctx.affinity().affinityTopologyVersion();
+
+        Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
+            cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
+
+        return new ClosablePartitionsAbstractIterator<T, T>(parts) {
+            @Override protected GridCloseableIterator<T> partitionIterator(int part)
+                throws IgniteCheckedException
+            {
+                return offheap.iterator(spaceName, c, part);
+            }
+        };
     }
 
     /**
@@ -1592,18 +1606,49 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (!offheapEnabled || (!primary && !backup))
             return new GridEmptyCloseableIterator<>();
 
-        return new GridCloseableIteratorAdapter<Map.Entry<byte[], byte[]>>() {
-            private GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it =
-                offheap.iterator(spaceName, partitions(primary, backup));
+        if (primary && backup)
+            return new GridCloseableIteratorAdapter<Map.Entry<byte[], byte[]>>() {
+                private GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it =
+                    offheap.iterator(spaceName);
 
+                private Map.Entry<byte[], byte[]> cur;
+
+                @Override protected Map.Entry<byte[], byte[]> onNext() {
+                    return cur = it.next();
+                }
+
+                @Override protected boolean onHasNext() {
+                    return it.hasNext();
+                }
+
+                @Override protected void onRemove() throws IgniteCheckedException {
+                    KeyCacheObject key = cctx.toCacheKeyObject(cur.getKey());
+
+                    int part = cctx.affinity().partition(key);
+
+                    offheap.removex(spaceName, part, key, key.valueBytes(cctx.cacheObjectContext()));
+                }
+
+                @Override protected void onClose() throws IgniteCheckedException {
+                    it.close();
+                }
+            };
+
+        AffinityTopologyVersion ver = cctx.affinity().affinityTopologyVersion();
+
+        Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
+            cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
+
+        return new ClosablePartitionsAbstractIterator<Map.Entry<byte[], byte[]>, IgniteBiTuple<byte[], byte[]>>(parts) {
             private Map.Entry<byte[], byte[]> cur;
 
             @Override protected Map.Entry<byte[], byte[]> onNext() {
-                return cur = it.next();
+                return cur = super.onNext();
             }
 
-            @Override protected boolean onHasNext() {
-                return it.hasNext();
+            @Override protected GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> partitionIterator(int part)
+                throws IgniteCheckedException {
+                return offheap.iterator(spaceName, part);
             }
 
             @Override protected void onRemove() throws IgniteCheckedException {
@@ -1613,38 +1658,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
                 offheap.removex(spaceName, part, key, key.valueBytes(cctx.cacheObjectContext()));
             }
-
-            @Override protected void onClose() throws IgniteCheckedException {
-                it.close();
-            }
         };
-    }
-
-    /**
-     * @param primary Include primaries.
-     * @param backup Include backups.
-     * @return Partitions.
-     */
-    private int[] partitions(boolean primary, boolean backup) {
-        AffinityTopologyVersion ver = cctx.affinity().affinityTopologyVersion();
-
-        Set<Integer> parts = null;
-
-        if (primary && backup) {
-            int[] primaryParts = U.toIntArray(cctx.affinity().primaryPartitions(cctx.localNodeId(), ver));
-
-            int[] backupParts = U.toIntArray(cctx.affinity().backupPartitions(cctx.localNodeId(), ver));
-
-            return U.addAll(primaryParts, backupParts);
-        }
-
-        if (primary)
-            parts = cctx.affinity().primaryPartitions(cctx.localNodeId(), ver);
-
-        if (backup)
-            parts = cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
-
-        return parts != null ? U.toIntArray(parts)  : new int[0];
     }
 
     /**
@@ -1680,14 +1694,18 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (primary && backup)
             return swapMgr.rawIterator(spaceName);
 
-        int[] parts = partitions(primary, backup);
+        AffinityTopologyVersion ver = cctx.affinity().affinityTopologyVersion();
 
-        List<GridIterator<Map.Entry<byte[], byte[]>>> iterators = new ArrayList<>();
+        Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
+            cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        for (int i = 0; i < parts.length; ++i)
-           iterators.add(swapMgr.rawIterator(spaceName, parts[i]));
-
-        return U.compoudIterator(iterators);
+        return new ClosablePartitionsAbstractIterator<Map.Entry<byte[], byte[]>, Map.Entry<byte[], byte[]>>(parts) {
+            @Override protected GridCloseableIterator<Map.Entry<byte[], byte[]>> partitionIterator(int part)
+                throws IgniteCheckedException
+            {
+                return swapMgr.rawIterator(spaceName, part);
+            }
+        };
     }
 
     /**
@@ -1712,7 +1730,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
 
         return new PartitionsIterator<K, V>(parts) {
-            @Override protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> partitionIterator(int part)
+            @Override protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> nextPartition(int part)
                 throws IgniteCheckedException
             {
                 return swapMgr.rawIterator(spaceName, part);
@@ -1742,8 +1760,8 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
 
         return new PartitionsIterator<K, V>(parts) {
-            @Override protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> partitionIterator(int part) {
-                return offheap.iterator(spaceName, new int[]{part});
+            @Override protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> nextPartition(int part) {
+                return offheap.iterator(spaceName, part);
             }
         };
     }
@@ -1942,79 +1960,19 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
     /**
      *
      */
-    private abstract class PartitionsIterator<K, V> implements Iterator<Cache.Entry<K, V>> {
-        /** */
-        private Iterator<Integer> partIt;
-
-        /** */
-        private Iterator<Cache.Entry<K, V>> curIt;
-
-        /** */
-        private Cache.Entry<K, V> next;
-
+    private abstract class PartitionsIterator<K, V>  extends PartitionsAbstractIterator<Cache.Entry<K, V>> {
         /**
          * @param parts Partitions
          */
         public PartitionsIterator(Collection<Integer> parts) {
-            this.partIt = parts.iterator();
-
-            advance();
+            super(parts);
         }
 
         /** {@inheritDoc} */
-        @Override public boolean hasNext() {
-            return next != null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public Cache.Entry<K, V> next() {
-            if (next == null)
-                throw new NoSuchElementException();
-
-            Cache.Entry<K, V> e = next;
-
-            advance();
-
-            return e;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void remove() {
-            throw new UnsupportedOperationException();
-        }
-
-        /**
-         * Switches to next element.
-         */
-        private void advance() {
-            next = null;
-
-            do {
-                if (curIt == null) {
-                    if (partIt.hasNext()) {
-                        int part = partIt.next();
-
-                        try {
-                            curIt = cacheEntryIterator(
-                                GridCacheSwapManager.this.<K, V>lazyIterator(partitionIterator(part)));
-                        }
-                        catch (IgniteCheckedException e) {
-                            throw new IgniteException(e);
-                        }
-                    }
-                }
-
-                if (curIt != null) {
-                    if (curIt.hasNext()) {
-                        next = curIt.next();
-
-                        break;
-                    }
-                    else
-                        curIt = null;
-                }
-            }
-            while (partIt.hasNext());
+        @Override protected Iterator<Cache.Entry<K, V>> partitionIterator(int part)
+            throws IgniteCheckedException {
+            return cacheEntryIterator(
+                GridCacheSwapManager.this.<K, V>lazyIterator(nextPartition(part)));
         }
 
         /**
@@ -2022,27 +1980,27 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
          * @return Iterator for given partition.
          * @throws IgniteCheckedException If failed.
          */
-        abstract protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> partitionIterator(int part)
+        abstract protected GridCloseableIterator<? extends Map.Entry<byte[], byte[]>> nextPartition(int part)
             throws IgniteCheckedException;
     }
 
     /**
      *
      */
-    private abstract class PartitionsKeyIterator implements Iterator<KeyCacheObject> {
+    private abstract class PartitionsAbstractIterator<T> implements Iterator<T> {
         /** */
         private Iterator<Integer> partIt;
 
         /** */
-        private Iterator<KeyCacheObject> curIt;
+        private Iterator<T> curIt;
 
         /** */
-        private KeyCacheObject next;
+        private T next;
 
         /**
          * @param parts Partitions
          */
-        public PartitionsKeyIterator(Collection<Integer> parts) {
+        public PartitionsAbstractIterator(Collection<Integer> parts) {
             this.partIt = parts.iterator();
 
             advance();
@@ -2054,11 +2012,11 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         }
 
         /** {@inheritDoc} */
-        @Override public KeyCacheObject next() {
+        @Override public T next() {
             if (next == null)
                 throw new NoSuchElementException();
 
-            KeyCacheObject e = next;
+            T e = next;
 
             advance();
 
@@ -2108,7 +2066,107 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
          * @return Iterator for given partition.
          * @throws IgniteCheckedException If failed.
          */
-        abstract protected Iterator<KeyCacheObject> partitionIterator(int part)
+        abstract protected Iterator<T> partitionIterator(int part)
+            throws IgniteCheckedException;
+    }
+
+    /**
+     *
+     */
+    private abstract class ClosablePartitionsAbstractIterator<T, T1 extends T> extends GridCloseableIteratorAdapter<T> {
+        /** */
+        private Iterator<Integer> partIt;
+
+        /** */
+        protected GridCloseableIterator<T1> curIt;
+
+        /** */
+        protected T next;
+
+        /**
+         * @param parts Partitions
+         */
+        public ClosablePartitionsAbstractIterator(Collection<Integer> parts) {
+            this.partIt = parts.iterator();
+
+            try {
+                advance();
+            }
+            catch (IgniteCheckedException e) {
+                e.printStackTrace(); // Should never happen.
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override protected boolean onHasNext() {
+            return next != null;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected T onNext() {
+            try {
+                if (next == null)
+                    throw new NoSuchElementException();
+
+                T e = next;
+
+                advance();
+
+                return e;
+            }
+            catch (IgniteCheckedException e) {
+                throw U.convertException(e);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void onClose() throws IgniteCheckedException {
+            if (curIt != null)
+                curIt.close();
+        }
+
+        /**
+         * Switches to next element.
+         */
+        private void advance() throws IgniteCheckedException {
+            next = null;
+
+            do {
+                if (curIt == null) {
+                    if (partIt.hasNext()) {
+                        int part = partIt.next();
+
+                        try {
+                            curIt = partitionIterator(part);
+                        }
+                        catch (IgniteCheckedException e) {
+                            throw new IgniteException(e);
+                        }
+                    }
+                }
+
+                if (curIt != null) {
+                    if (curIt.hasNext()) {
+                        next = curIt.next();
+
+                        break;
+                    }
+                    else {
+                        curIt.close();
+
+                        curIt = null;
+                    }
+                }
+            }
+            while (partIt.hasNext());
+        }
+
+        /**
+         * @param part Partition.
+         * @return Iterator for given partition.
+         * @throws IgniteCheckedException If failed.
+         */
+        abstract protected GridCloseableIterator<T1> partitionIterator(int part)
             throws IgniteCheckedException;
     }
 }

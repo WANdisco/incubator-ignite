@@ -64,19 +64,11 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
     /** */
     protected int parts = 17;
 
-    /** */
-    protected int[] allParts;
-
     /**
      *
      */
     protected GridOffHeapPartitionedMapAbstractSelfTest() {
         super(false);
-
-        allParts = new int[parts];
-
-        for (int i = 0; i < parts; ++i)
-            allParts[i] = i;
     }
 
     /** {@inheritDoc} */
@@ -460,7 +452,7 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
 
         int cnt = 0;
 
-        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(allParts)) {
+        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator()) {
             while (it.hasNext()) {
                 IgniteBiTuple<byte[], byte[]> t = it.next();
 
@@ -538,7 +530,7 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
                     assertEquals(new String(map.get(p, hash(key), key.getBytes())), val);
                 }
 
-                try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(allParts)) {
+                try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator()) {
                     while (it.hasNext()) {
                         IgniteBiTuple<byte[], byte[]> t = it.next();
 
@@ -557,7 +549,7 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
 
         int cnt = 0;
 
-        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(allParts)) {
+        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator()) {
             while (it.hasNext()) {
                 IgniteBiTuple<byte[], byte[]> t = it.next();
 
@@ -608,7 +600,7 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
             @Override public void run() {
                 try {
                     while (running.get()) {
-                        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(allParts)) {
+                        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator()) {
                             while (it.hasNext()) {
                                 IgniteBiTuple<byte[], byte[]> tup = it.next();
 
@@ -685,7 +677,7 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
 
                 int cnt = 0;
 
-                try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(new int[]{p})) {
+                try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(p)) {
                     while (it.hasNext()) {
                         IgniteBiTuple<byte[], byte[]> t = it.next();
 
@@ -760,7 +752,7 @@ public abstract class GridOffHeapPartitionedMapAbstractSelfTest extends GridComm
                         assertNotNull(map.get(p, hash(key), key.getBytes()));
                         assertEquals(new String(map.get(p, hash(key), key.getBytes())), val);
 
-                        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(new int[]{p})) {
+                        try (GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = map.iterator(p)) {
                             while (it.hasNext()) {
                                 IgniteBiTuple<byte[], byte[]> t = it.next();
 

@@ -276,26 +276,13 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
     }
 
     /** {@inheritDoc} */
-    @Override public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator(final int[] parts) {
-        return new GridCloseableIteratorAdapter<IgniteBiTuple<byte[], byte[]>>() {
-            private int p;
-
-            private GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> curIt;
-
-            {
-                try {
-                    advance();
-                }
-                catch (IgniteCheckedException e) {
-                    e.printStackTrace(); // Should never happen.
-                }
-            }
-
-            private void advance() throws IgniteCheckedException {
+    @Override public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator() {
+        return new PartitionedMapCloseableIterator<IgniteBiTuple<byte[], byte[]>>() {
+            protected void advance() throws IgniteCheckedException {
                 curIt = null;
 
-                while (p < parts.length) {
-                    curIt = mapFor(parts[p++]).iterator();
+                while (p < parts) {
+                    curIt = mapFor(p++).iterator();
 
                     if (curIt.hasNext())
                         return;
@@ -305,100 +292,40 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
 
                 curIt = null;
             }
+        };
+    }
 
-            @Override protected IgniteBiTuple<byte[], byte[]> onNext() throws IgniteCheckedException {
-                if (curIt == null)
-                    throw new NoSuchElementException();
+    /** {@inheritDoc} */
+    @Override public <T> GridCloseableIterator<T> iterator(final CX2<T2<Long, Integer>, T2<Long, Integer>, T> c) {
+        assert c != null;
 
-                IgniteBiTuple<byte[], byte[]> t = curIt.next();
+        return new PartitionedMapCloseableIterator<T>() {
+            protected void advance() throws IgniteCheckedException {
+                curIt = null;
 
-                if (!curIt.hasNext()) {
-                    curIt.close();
+                while (p < parts) {
+                    curIt = mapFor(p++).iterator(c);
 
-                    advance();
+                    if (curIt.hasNext())
+                        return;
+                    else
+                        curIt.close();
                 }
 
-                return t;
-            }
-
-            @Override protected boolean onHasNext() {
-                return curIt != null;
-            }
-
-            @Override protected void onRemove() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override protected void onClose() throws IgniteCheckedException {
-                if (curIt != null)
-                    curIt.close();
+                curIt = null;
             }
         };
     }
 
     /** {@inheritDoc} */
     @Override public <T> GridCloseableIterator<T> iterator(final CX2<T2<Long, Integer>, T2<Long, Integer>, T> c,
-        final int[] parts0)
-    {
-        assert c != null;
+       int part) {
+       return mapFor(part).iterator(c);
+    }
 
-        return new GridCloseableIteratorAdapter<T>() {
-            private int p;
-
-            private GridCloseableIterator<T> curIt;
-
-            {
-                try {
-                    advance();
-                }
-                catch (IgniteCheckedException e) {
-                    e.printStackTrace(); // Should never happen.
-                }
-            }
-
-            private void advance() throws IgniteCheckedException {
-                curIt = null;
-
-                while (p < parts0.length) {
-                    curIt = mapFor(parts0[p++]).iterator(c);
-
-                    if (curIt.hasNext())
-                        return;
-                    else
-                        curIt.close();
-                }
-
-                curIt = null;
-            }
-
-            @Override protected T onNext() throws IgniteCheckedException {
-                if (curIt == null)
-                    throw new NoSuchElementException();
-
-                T t = curIt.next();
-
-                if (!curIt.hasNext()) {
-                    curIt.close();
-
-                    advance();
-                }
-
-                return t;
-            }
-
-            @Override protected boolean onHasNext() {
-                return curIt != null;
-            }
-
-            @Override protected void onRemove() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override protected void onClose() throws IgniteCheckedException {
-                if (curIt != null)
-                    curIt.close();
-            }
-        };
+    /** {@inheritDoc} */
+    @Override public GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> iterator(int p) {
+        return mapFor(p).iterator();
     }
 
     /**
@@ -426,5 +353,64 @@ public class GridUnsafePartitionedMap implements GridOffHeapPartitionedMap {
      */
     public long lruSize() {
         return lru.size();
+    }
+
+    /**
+     *  Partitioned closable iterator.
+     */
+    private abstract class PartitionedMapCloseableIterator<T> extends GridCloseableIteratorAdapter<T> {
+        /** Current partition. */
+        protected int p;
+
+        /** Current iterator. */
+        protected GridCloseableIterator<T> curIt;
+
+        {
+            try {
+                advance();
+            }
+            catch (IgniteCheckedException e) {
+                e.printStackTrace(); // Should never happen.
+            }
+        }
+
+        /**
+         * Switch to next partition.
+         *
+         * @throws IgniteCheckedException If failed.
+         */
+        abstract void advance() throws IgniteCheckedException;
+
+        /** {@inheritDoc} */
+        @Override protected T onNext() throws IgniteCheckedException {
+            if (curIt == null)
+                throw new NoSuchElementException();
+
+            T t = curIt.next();
+
+            if (!curIt.hasNext()) {
+                curIt.close();
+
+                advance();
+            }
+
+            return t;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected boolean onHasNext() {
+            return curIt != null;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void onRemove() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void onClose() throws IgniteCheckedException {
+            if (curIt != null)
+                curIt.close();
+        }
     }
 }

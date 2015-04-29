@@ -60,6 +60,8 @@ public class OffHeapTieredTransactionSelfTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(ccfg);
 
+        cfg.getTransactionConfiguration().setTxSerializableEnabled(true);
+
         return cfg;
     }
 
@@ -84,6 +86,7 @@ public class OffHeapTieredTransactionSelfTest extends GridCommonAbstractTest {
      * @throws Exception In case of error.
      */
     public void testPutAll() throws Exception {
+
         IgniteCache<String, Integer> cache = grid(0).cache(null);
 
         final int KEYS = 5;
@@ -93,12 +96,33 @@ public class OffHeapTieredTransactionSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < KEYS; i++)
             data.put("key_" + i, i);
 
+        checkPutAll(cache, data, OPTIMISTIC, READ_COMMITTED);
+
+        checkPutAll(cache, data, OPTIMISTIC, REPEATABLE_READ);
+
+        checkPutAll(cache, data, OPTIMISTIC, SERIALIZABLE);
+
+        checkPutAll(cache, data, PESSIMISTIC, READ_COMMITTED);
+
+        checkPutAll(cache, data, PESSIMISTIC, REPEATABLE_READ);
+
+        checkPutAll(cache, data, PESSIMISTIC, SERIALIZABLE);
+    }
+
+    /**
+     * @throws Exception In case of error.
+     */
+    private void checkPutAll(IgniteCache<String, Integer> cache, Map<String, Integer> data,
+        TransactionConcurrency txConcurrency, TransactionIsolation txIsolation) throws Exception {
         IgniteTransactions txs = cache.unwrap(Ignite.class).transactions();
 
-        try (Transaction tx = txs.txStart(PESSIMISTIC, READ_COMMITTED)) {
+        try (Transaction tx = txs.txStart(txConcurrency, txIsolation)) {
             cache.putAll(data);
 
             tx.commit();
         }
+
+        for (Map.Entry<String, Integer> entry : data.entrySet())
+            assertEquals(entry.getValue(), cache.get(entry.getKey()));
     }
 }
