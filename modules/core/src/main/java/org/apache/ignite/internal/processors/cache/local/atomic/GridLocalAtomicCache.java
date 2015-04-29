@@ -1415,7 +1415,7 @@ public class GridLocalAtomicCache<K, V> extends GridCacheAdapter<K, V> {
         for (GridCacheEntryEx entry : locked)
             ctx.evicts().touch(entry, topVer);
 
-        throw new NullPointerException("Null keys");
+        throw new NullPointerException("Null key.");
     }
 
     /**

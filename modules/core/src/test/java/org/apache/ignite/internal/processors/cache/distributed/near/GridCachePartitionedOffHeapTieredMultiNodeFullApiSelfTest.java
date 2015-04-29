@@ -57,18 +57,17 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
 
         assert key != null;
 
-        map.put(key, 4);
-
         IgniteCache<String, Integer> primaryCache = primaryCache(key);
 
         assertFalse(grid(0).affinity(null).isPrimary(grid(0).localNode(), key));
         assertFalse(grid(0).affinity(null).isBackup(grid(0).localNode(), key));
 
-        assertEquals(4, cache.get(key).intValue());
+        primaryCache.put(key, 4); // Put from primary.
+
         assertNull(primaryCache.localPeek(key, CachePeekMode.ONHEAP));
         assertEquals(4, primaryCache.localPeek(key, CachePeekMode.OFFHEAP).intValue());
 
-        cache.put(key, 5);
+        cache.put(key, 5); // Put from near to add reader on primary.
 
         assertEquals(5, primaryCache.localPeek(key, CachePeekMode.ONHEAP).intValue());
         assertEquals(5, primaryCache.localPeek(key, CachePeekMode.OFFHEAP).intValue());

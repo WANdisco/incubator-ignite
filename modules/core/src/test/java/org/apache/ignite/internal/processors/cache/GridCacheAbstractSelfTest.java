@@ -125,8 +125,6 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
                                             jcache(fi).remove(k.getKey());
                                     }
 
-                                    jcache(fi).localSize(CachePeekMode.ALL);
-
                                     return jcache(fi).localSize(CachePeekMode.ALL) == 0;
                                 }
                             },

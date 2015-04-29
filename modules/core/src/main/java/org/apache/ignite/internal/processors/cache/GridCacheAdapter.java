@@ -827,12 +827,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      */
     public GridCacheEntryEx entryEx(KeyCacheObject key, AffinityTopologyVersion topVer) {
         GridCacheEntryEx e = entry0(key, topVer, true, false);
-        try {
-            e.unswap();
-        }
-        catch (IgniteCheckedException e1) {
-            e1.printStackTrace();
-        }
+
         assert e != null;
 
         return e;
@@ -2726,11 +2721,11 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         for (Iterator<KeyCacheObject> it = ctx.swap().offHeapKeyIterator(true, true, AffinityTopologyVersion.NONE);
              it.hasNext(); )
-            remove((K)it.next().value(ctx.cacheObjectContext(), false));
+            remove((K)it.next());
 
         for (Iterator<KeyCacheObject> it = ctx.swap().swapKeyIterator(true, true, AffinityTopologyVersion.NONE);
              it.hasNext(); )
-            remove((K)it.next().value(ctx.cacheObjectContext(), false));
+            remove((K)it.next());
 
         removeAll(keySet());
     }

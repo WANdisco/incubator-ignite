@@ -22,6 +22,7 @@ import org.apache.ignite.configuration.*;
 import org.apache.ignite.internal.processors.cache.distributed.near.*;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.*;
+import static org.apache.ignite.cache.CacheMemoryMode.*;
 
 /**
  * Tests colocated cache with off-heap tiered mode.
@@ -46,5 +47,10 @@ public class GridCachePartitionedNearDisabledOffHeapTieredAtomicFullApiSelfTest 
     /** {@inheritDoc} */
     @Override protected NearCacheConfiguration nearConfiguration() {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected CacheMemoryMode memoryMode() {
+        return OFFHEAP_TIERED;
     }
 }

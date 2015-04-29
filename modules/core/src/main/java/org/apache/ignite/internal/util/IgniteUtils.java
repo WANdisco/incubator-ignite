@@ -9021,7 +9021,7 @@ public abstract class IgniteUtils {
     public static <T> GridCloseableIteratorAdapter<T> compoudIterator(final List<GridIterator<T>> allIters) {
         return  new GridCloseableIteratorAdapter<T> () {
             /** */
-            private static final long serialVersionUID = 4585888051556166304L;
+            private static final long serialVersionUID = 0L;
 
             /** */
             private final List<GridIterator<T>> iters;

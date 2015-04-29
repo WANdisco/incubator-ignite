@@ -2944,8 +2944,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter
                 }
                 else
                     return nonInterruptable(loadFut.chain(new CX1<IgniteInternalFuture<Set<KeyCacheObject>>, GridCacheReturn>() {
-                        @Override
-                        public GridCacheReturn applyx(IgniteInternalFuture<Set<KeyCacheObject>> f)
+                        @Override public GridCacheReturn applyx(IgniteInternalFuture<Set<KeyCacheObject>> f)
                             throws IgniteCheckedException {
                             f.get();
 
