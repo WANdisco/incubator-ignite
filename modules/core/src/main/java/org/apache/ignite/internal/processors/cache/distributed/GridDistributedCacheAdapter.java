@@ -32,7 +32,6 @@ import org.apache.ignite.internal.processors.task.*;
 import org.apache.ignite.internal.util.future.*;
 import org.apache.ignite.internal.util.typedef.internal.*;
 import org.apache.ignite.lang.*;
-import org.apache.ignite.resources.*;
 import org.apache.ignite.transactions.*;
 import org.jetbrains.annotations.*;
 
@@ -231,22 +230,12 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
      * operation on a cache with the given name.
      */
     @GridInternal
-    private static class GlobalRemoveAllCallable<K,V> implements Callable<Object>, Externalizable {
+    private static class GlobalRemoveAllCallable<K,V> extends DelayedCallable<K, V> implements Callable<Object> {
         /** */
         private static final long serialVersionUID = 0L;
 
-        /** Cache name. */
-        private String cacheName;
-
-        /** Topology version. */
-        private AffinityTopologyVersion topVer;
-
         /** Skip store flag. */
         private boolean skipStore;
-
-        /** Injected grid instance. */
-        @IgniteInstanceResource
-        private Ignite ignite;
 
         /**
          * Empty constructor for serialization.
@@ -261,8 +250,7 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
          * @param skipStore Skip store flag.
          */
         private GlobalRemoveAllCallable(String cacheName, @NotNull AffinityTopologyVersion topVer, boolean skipStore) {
-            this.cacheName = cacheName;
-            this.topVer = topVer;
+            super(cacheName, topVer);
             this.skipStore = skipStore;
         }
 
@@ -270,11 +258,11 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
          * {@inheritDoc}
          */
         @Override public Object call() throws Exception {
-            GridCacheAdapter<K, V> cacheAdapter = ((IgniteKernal)ignite).context().cache().internalCache(cacheName);
+            GridCacheAdapter<K, V> cacheAdapter = ((IgniteKernal) ignite).context().cache().internalCache(cacheName);
 
             final GridCacheContext<K, V> ctx = cacheAdapter.context();
 
-            ctx.affinity().affinityReadyFuture(topVer).get();
+            waitAffinityReadyFuture();
 
             ctx.gate().enter();
 
@@ -338,15 +326,15 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
 
         /** {@inheritDoc} */
         @Override public void writeExternal(ObjectOutput out) throws IOException {
-            U.writeString(out, cacheName);
-            out.writeObject(topVer);
+            super.writeExternal(out);
+
             out.writeBoolean(skipStore);
         }
 
         /** {@inheritDoc} */
         @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-            cacheName = U.readString(in);
-            topVer = (AffinityTopologyVersion)in.readObject();
+            super.readExternal(in);
+
             skipStore = in.readBoolean();
         }
     }
