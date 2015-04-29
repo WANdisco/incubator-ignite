@@ -914,9 +914,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         throws IgniteCheckedException {
         IgniteBiPredicate<K, V> filter = qry.scanFilter();
 
-        Iterator<Map.Entry<byte[], byte[]>> it;
-
-        it = cctx.swap().rawSwapIterator(true, backups);
+        Iterator<Map.Entry<byte[], byte[]>> it = cctx.swap().rawSwapIterator(true, backups);
 
         return scanIterator(it, filter, qry.keepPortable());
     }

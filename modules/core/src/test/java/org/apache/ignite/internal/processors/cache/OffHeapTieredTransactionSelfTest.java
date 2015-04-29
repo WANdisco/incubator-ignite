@@ -86,7 +86,6 @@ public class OffHeapTieredTransactionSelfTest extends GridCommonAbstractTest {
      * @throws Exception In case of error.
      */
     public void testPutAll() throws Exception {
-
         IgniteCache<String, Integer> cache = grid(0).cache(null);
 
         final int KEYS = 5;

@@ -1559,7 +1559,9 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @return Off-heap iterator.
      */
     public <T> GridCloseableIterator<T> rawOffHeapIterator(final CX2<T2<Long, Integer>, T2<Long, Integer>, T> c,
-        boolean primary, boolean backup) {
+        boolean primary,
+        boolean backup)
+    {
         assert c != null;
 
         if (!offheapEnabled || (!primary && !backup))
@@ -1575,7 +1577,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new ClosablePartitionsIterator<T, T>(parts) {
+        return new CloseablePartitionsIterator<T, T>(parts) {
             @Override protected GridCloseableIterator<T> partitionIterator(int part)
                 throws IgniteCheckedException
             {
@@ -1589,14 +1591,15 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @param backup Include backups.
      * @return Raw off-heap iterator.
      */
-    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawOffHeapIterator(final boolean primary, final boolean backup) {
+    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawOffHeapIterator(final boolean primary,
+        final boolean backup)
+    {
         if (!offheapEnabled || (!primary && !backup))
             return new GridEmptyCloseableIterator<>();
 
         if (primary && backup)
             return new GridCloseableIteratorAdapter<Map.Entry<byte[], byte[]>>() {
-                private GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it =
-                    offheap.iterator(spaceName);
+                private GridCloseableIterator<IgniteBiTuple<byte[], byte[]>> it = offheap.iterator(spaceName);
 
                 private Map.Entry<byte[], byte[]> cur;
 
@@ -1626,7 +1629,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new ClosablePartitionsIterator<Map.Entry<byte[], byte[]>, IgniteBiTuple<byte[], byte[]>>(parts) {
+        return new CloseablePartitionsIterator<Map.Entry<byte[], byte[]>, IgniteBiTuple<byte[], byte[]>>(parts) {
             private Map.Entry<byte[], byte[]> cur;
 
             @Override protected Map.Entry<byte[], byte[]> onNext() {
@@ -1672,7 +1675,9 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @param backup Include backups.
      * @throws IgniteCheckedException If failed.
      */
-    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawSwapIterator(boolean primary, boolean backup) throws IgniteCheckedException {
+    public GridCloseableIterator<Map.Entry<byte[], byte[]>> rawSwapIterator(boolean primary, boolean backup)
+        throws IgniteCheckedException
+    {
         if (!swapEnabled || (!primary && !backup))
             return new GridEmptyCloseableIterator<>();
 
@@ -1686,7 +1691,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new ClosablePartitionsIterator<Map.Entry<byte[], byte[]>, Map.Entry<byte[], byte[]>>(parts) {
+        return new CloseablePartitionsIterator<Map.Entry<byte[], byte[]>, Map.Entry<byte[], byte[]>>(parts) {
             @Override protected GridCloseableIterator<Map.Entry<byte[], byte[]>> partitionIterator(int part)
                 throws IgniteCheckedException
             {
@@ -1732,7 +1737,9 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @return Offheap entries iterator.
      * @throws IgniteCheckedException If failed.
      */
-    public <K, V> Iterator<Cache.Entry<K, V>> offheapIterator(boolean primary, boolean backup, AffinityTopologyVersion topVer)
+    public <K, V> Iterator<Cache.Entry<K, V>> offheapIterator(boolean primary,
+        boolean backup,
+        AffinityTopologyVersion topVer)
         throws IgniteCheckedException
     {
         assert primary || backup;
@@ -1947,7 +1954,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
     /**
      *
      */
-    private abstract class PartitionsIterator<K, V>  extends PartitionsAbstractIterator<Cache.Entry<K, V>> {
+    private abstract class PartitionsIterator<K, V> extends PartitionsAbstractIterator<Cache.Entry<K, V>> {
         /**
          * @param parts Partitions
          */
@@ -1958,8 +1965,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         /** {@inheritDoc} */
         @Override protected Iterator<Cache.Entry<K, V>> partitionIterator(int part)
             throws IgniteCheckedException {
-            return cacheEntryIterator(
-                GridCacheSwapManager.this.<K, V>lazyIterator(nextPartition(part)));
+            return cacheEntryIterator(GridCacheSwapManager.this.<K, V>lazyIterator(nextPartition(part)));
         }
 
         /**
@@ -2060,7 +2066,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
     /**
      *
      */
-    private abstract class ClosablePartitionsIterator<T, T1 extends T> extends GridCloseableIteratorAdapter<T> {
+    private abstract class CloseablePartitionsIterator<T, T1 extends T> extends GridCloseableIteratorAdapter<T> {
         /** */
         private Iterator<Integer> partIt;
 
@@ -2073,14 +2079,14 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         /**
          * @param parts Partitions
          */
-        public ClosablePartitionsIterator(Collection<Integer> parts) {
+        public CloseablePartitionsIterator(Collection<Integer> parts) {
             this.partIt = parts.iterator();
 
             try {
                 advance();
             }
             catch (IgniteCheckedException e) {
-                e.printStackTrace(); // Should never happen.
+                throw U.convertException(e);
             }
         }
 
@@ -2114,6 +2120,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
 
         /**
          * Switches to next element.
+         * @throws IgniteCheckedException If failed.
          */
         private void advance() throws IgniteCheckedException {
             next = null;
@@ -2153,7 +2160,6 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
          * @return Iterator for given partition.
          * @throws IgniteCheckedException If failed.
          */
-        abstract protected GridCloseableIterator<T1> partitionIterator(int part)
-            throws IgniteCheckedException;
+        abstract protected GridCloseableIterator<T1> partitionIterator(int part) throws IgniteCheckedException;
     }
 }
