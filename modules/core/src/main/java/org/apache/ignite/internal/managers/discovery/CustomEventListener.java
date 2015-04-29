@@ -17,21 +17,16 @@
 
 package org.apache.ignite.internal.managers.discovery;
 
-import java.io.*;
+import org.apache.ignite.cluster.*;
 
 /**
  *
+ * @param <T>
  */
-public interface DiscoveryCustomMessage extends Serializable {
+public interface CustomEventListener<T extends DiscoveryCustomMessage> {
     /**
-     * Whether or not minor version of topology should be increased on message receive.
-     *
-     * @return {@code true} if minor topology version should be increased.
+     * @param snd Send.
+     * @param msg Message.
      */
-    public boolean forwardMinorVersion();
-
-    /**
-     *
-     */
-    public boolean waitForClientResponse();
+    public void onCustomEvent(ClusterNode snd, T msg);
 }
