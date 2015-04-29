@@ -137,12 +137,12 @@ public class GridCachePartitionedMultiNodeFullApiSelfTest extends GridCacheParti
 
         int size = 10;
 
-        IgniteCache<Object, Object> prj0 = grid(0).cache(null);
+        IgniteCache<Object, Object> chache0 = grid(0).cache(null);
 
         for (int i = 0; i < size; i++) {
             info("Putting value [i=" + i + ']');
 
-            prj0.put(i, i);
+            chache0.put(i, i);
 
             info("Finished putting value [i=" + i + ']');
         }
@@ -155,20 +155,21 @@ public class GridCachePartitionedMultiNodeFullApiSelfTest extends GridCacheParti
 
             for (int k = 0; k < size; k++) {
                 if (affinity(cache).isPrimaryOrBackup(node, k))
-                    assertEquals("Check failed for node: " + node.id(), k, peek(cache, k));
+                    assertEquals("Check failed for node: " + node.id(), k,
+                        cache.localPeek(k, CachePeekMode.ONHEAP, CachePeekMode.OFFHEAP));
             }
         }
 
         for (int i = 0; i < size; i++) {
             info("Putting value 2 [i=" + i + ']');
 
-            assertEquals(i, prj0.getAndPutIfAbsent(i, i * i));
+            assertEquals(i, chache0.getAndPutIfAbsent(i, i * i));
 
             info("Finished putting value 2 [i=" + i + ']');
         }
 
         for (int i = 0; i < size; i++)
-            assertEquals(i, prj0.get(i));
+            assertEquals(i, chache0.get(i));
     }
 
     /**
