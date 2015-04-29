@@ -5706,6 +5706,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
     }
 
+    /**
+     * Delayed callable class.
+     */
     protected static abstract class DelayedCallable<K, V> implements Externalizable {
         /** */
         private static final long serialVersionUID = 0L;
