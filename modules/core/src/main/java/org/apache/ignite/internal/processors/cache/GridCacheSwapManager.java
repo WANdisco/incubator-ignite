@@ -1588,7 +1588,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new ClosablePartitionsAbstractIterator<T, T>(parts) {
+        return new ClosablePartitionsIterator<T, T>(parts) {
             @Override protected GridCloseableIterator<T> partitionIterator(int part)
                 throws IgniteCheckedException
             {
@@ -1639,7 +1639,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new ClosablePartitionsAbstractIterator<Map.Entry<byte[], byte[]>, IgniteBiTuple<byte[], byte[]>>(parts) {
+        return new ClosablePartitionsIterator<Map.Entry<byte[], byte[]>, IgniteBiTuple<byte[], byte[]>>(parts) {
             private Map.Entry<byte[], byte[]> cur;
 
             @Override protected Map.Entry<byte[], byte[]> onNext() {
@@ -1699,7 +1699,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         Set<Integer> parts = primary ? cctx.affinity().primaryPartitions(cctx.localNodeId(), ver) :
             cctx.affinity().backupPartitions(cctx.localNodeId(), ver);
 
-        return new ClosablePartitionsAbstractIterator<Map.Entry<byte[], byte[]>, Map.Entry<byte[], byte[]>>(parts) {
+        return new ClosablePartitionsIterator<Map.Entry<byte[], byte[]>, Map.Entry<byte[], byte[]>>(parts) {
             @Override protected GridCloseableIterator<Map.Entry<byte[], byte[]>> partitionIterator(int part)
                 throws IgniteCheckedException
             {
@@ -2073,7 +2073,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
     /**
      *
      */
-    private abstract class ClosablePartitionsAbstractIterator<T, T1 extends T> extends GridCloseableIteratorAdapter<T> {
+    private abstract class ClosablePartitionsIterator<T, T1 extends T> extends GridCloseableIteratorAdapter<T> {
         /** */
         private Iterator<Integer> partIt;
 
@@ -2086,7 +2086,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         /**
          * @param parts Partitions
          */
-        public ClosablePartitionsAbstractIterator(Collection<Integer> parts) {
+        public ClosablePartitionsIterator(Collection<Integer> parts) {
             this.partIt = parts.iterator();
 
             try {
