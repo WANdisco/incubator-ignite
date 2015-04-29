@@ -39,7 +39,7 @@ public class GridCachePartitionedOffHeapTieredMultiNodeFullApiSelfTest extends G
     /**
     * @throws Exception If failed.
     */
-    public void testPutRemove() throws Exception {
+    public void testPut() throws Exception {
         IgniteCache<String, Integer> cache = grid(0).cache(null);
 
         assert gridCount() > 3;
