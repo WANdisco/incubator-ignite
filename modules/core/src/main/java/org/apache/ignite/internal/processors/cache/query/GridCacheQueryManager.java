@@ -882,7 +882,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             if (cctx.swap().swapEnabled())
                 iters.add(swapIterator(qry, backups));
 
-            it = U.compoudIterator(iters);
+            it = new CompoundIterator<>(iters);
         }
         else
             it = heapIt;
@@ -2507,6 +2507,67 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                 return null;
 
             return new IgniteBiTuple<>(e.key(), (V)cctx.unwrapTemporary(e.value())) ;
+        }
+    }
+
+    /**
+     *
+     */
+    private static class CompoundIterator<T> extends GridIteratorAdapter<T> {
+        /** */
+        private static final long serialVersionUID = 4585888051556166304L;
+
+        /** */
+        private final List<GridIterator<T>> iters;
+
+        /** */
+        private int idx;
+
+        /** */
+        private GridIterator<T> iter;
+
+        /**
+         * @param iters Iterators.
+         */
+        private CompoundIterator(List<GridIterator<T>> iters) {
+            if (iters.isEmpty())
+                throw new IllegalArgumentException();
+
+            this.iters = iters;
+
+            iter = F.first(iters);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean hasNextX() throws IgniteCheckedException {
+            if (iter.hasNextX())
+                return true;
+
+            idx++;
+
+            while(idx < iters.size()) {
+                iter = iters.get(idx);
+
+                if (iter.hasNextX())
+                    return true;
+
+                idx++;
+            }
+
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public T nextX() throws IgniteCheckedException {
+            if (!hasNextX())
+                throw new NoSuchElementException();
+
+            return iter.nextX();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void removeX() throws IgniteCheckedException {
+            throw new UnsupportedOperationException();
         }
     }
 
