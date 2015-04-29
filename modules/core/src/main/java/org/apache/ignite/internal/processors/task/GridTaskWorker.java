@@ -852,7 +852,8 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                 }
                 catch (IgniteException e) {
                     if (X.hasCause(e, GridInternalException.class) ||
-                        X.hasCause(e, IgfsOutOfSpaceException.class)) {
+                        X.hasCause(e, IgfsOutOfSpaceException.class) ||
+                        X.hasCause(e, ClusterTopologyException.class)) {
                         // Print internal exceptions only if debug is enabled.
                         if (log.isDebugEnabled())
                             U.error(log, "Failed to obtain remote job result policy for result from " +
