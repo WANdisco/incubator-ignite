@@ -75,7 +75,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Filed result. */
+    /** Failed result. */
     private static final Object FAIL = new Integer(-1);
 
     /** clearLocally() split threshold. */
@@ -1083,27 +1083,18 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
     /** {@inheritDoc} */
     @Override public void clear() throws IgniteCheckedException {
-        // Clear local cache synchronously.
-        clearLocally();
-
-        clearRemotes(0, new GlobalRemoteClearAllCallable(name(), ctx.affinity().affinityTopologyVersion()));
+        clearAll(0, new GlobalClearAllCallable(name(), ctx.affinity().affinityTopologyVersion()));
     }
 
     /** {@inheritDoc} */
     @Override public void clear(K key) throws IgniteCheckedException {
-        // Clear local cache synchronously.
-        clearLocally(key);
-
-        clearRemotes(0, new GlobalRemoteClearKeySetCallable<K, V>(name(), ctx.affinity().affinityTopologyVersion(),
+        clearAll(0, new GlobalClearKeySetCallable<K, V>(name(), ctx.affinity().affinityTopologyVersion(),
             Collections.singleton(key)));
     }
 
     /** {@inheritDoc} */
     @Override public void clearAll(Set<? extends K> keys) throws IgniteCheckedException {
-        // Clear local cache synchronously.
-        clearLocallyAll(keys);
-
-        clearRemotes(0, new GlobalRemoteClearKeySetCallable<K, V>(name(), ctx.affinity().affinityTopologyVersion(),
+        clearAll(0, new GlobalClearKeySetCallable<K, V>(name(), ctx.affinity().affinityTopologyVersion(),
             keys));
     }
 
@@ -1125,7 +1116,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @param clearCall Global clear callable object.
      * @throws IgniteCheckedException In case of cache could not be cleared on any of the nodes.
      */
-    private void clearRemotes(long timeout, GlobalClearCallable clearCall) throws IgniteCheckedException {
+    private void clearAll(long timeout, TopologyVersionAwareCallable clearCall) throws IgniteCheckedException {
         try {
             // Send job to remote nodes only.
             Collection<ClusterNode> nodes =
@@ -1163,7 +1154,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @param clearCall Global clear callable object.
      * @return Future.
      */
-    private IgniteInternalFuture<?> clearAsync(GlobalClearCallable clearCall) {
+    private IgniteInternalFuture<?> clearAsync(TopologyVersionAwareCallable clearCall) {
         Collection<ClusterNode> nodes = ctx.grid().cluster().forCacheNodes(name(), true, true, false).nodes();
 
         if (!nodes.isEmpty()) {
@@ -4840,38 +4831,17 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /**
-     * Internal callable which performs clear operation on a cache with the given name.
-     */
-    @GridInternal
-    private static abstract class GlobalClearCallable extends VersionAwareCallable {
-        /**
-         * Empty constructor for serialization.
-         */
-        public GlobalClearCallable() {
-            // No-op.
-        }
-
-        /**
-         * @param cacheName Cache name.
-         * @param topVer Affinity topology version.
-         */
-        protected GlobalClearCallable(String cacheName, AffinityTopologyVersion topVer) {
-            super(cacheName, topVer);
-        }
-    }
-
-    /**
      * Global clear all.
      */
     @GridInternal
-    private static class GlobalRemoteClearAllCallable extends GlobalClearCallable {
+    private static class GlobalClearAllCallable extends TopologyVersionAwareCallable {
         /** */
         private static final long serialVersionUID = 0L;
 
         /**
          * Empty constructor for serialization.
          */
-        public GlobalRemoteClearAllCallable() {
+        public GlobalClearAllCallable() {
             // No-op.
         }
 
@@ -4879,7 +4849,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
          * @param cacheName Cache name.
          * @param topVer Affinity topology version.
          */
-        private GlobalRemoteClearAllCallable(String cacheName, AffinityTopologyVersion topVer) {
+        private GlobalClearAllCallable(String cacheName, AffinityTopologyVersion topVer) {
             super(cacheName, topVer);
         }
 
@@ -4892,28 +4862,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         /** {@inheritDoc} */
         @Override protected Collection<ClusterNode> nodes(GridCacheContext ctx) {
-            return ctx.grid().cluster().forCacheNodes(ctx.name(), true, true, false).forRemotes().nodes();
-        }
-    }
-
-    /**
-     * Global clear all.
-     */
-    @GridInternal
-    private static class GlobalClearAllCallable extends GlobalRemoteClearAllCallable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /**
-         * @param cacheName Cache name.
-         * @param topVer Affinity topology version.
-         */
-        private GlobalClearAllCallable(String cacheName, AffinityTopologyVersion topVer) {
-            super(cacheName, topVer);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected Collection<ClusterNode> nodes(GridCacheContext ctx) {
             return ctx.grid().cluster().forCacheNodes(ctx.name(), true, true, false).nodes();
         }
     }
@@ -4922,7 +4870,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * Global clear keys.
      */
     @GridInternal
-    private static class GlobalClearKeySetCallable<K, V> extends GlobalClearCallable {
+    private static class GlobalClearKeySetCallable<K, V> extends TopologyVersionAwareCallable {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -4961,33 +4909,10 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /**
-     * Global clear keys.
-     */
-    @GridInternal
-    private static class GlobalRemoteClearKeySetCallable<K, V> extends GlobalClearKeySetCallable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /**
-         * @param cacheName Cache name.
-         * @param topVer Affinity topology version.
-         * @param keys Keys to clear.
-         */
-        protected GlobalRemoteClearKeySetCallable(String cacheName, AffinityTopologyVersion topVer, Set<? extends K> keys) {
-            super(cacheName, topVer, keys);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected Collection<ClusterNode> nodes(GridCacheContext ctx) {
-            return ctx.grid().cluster().forCacheNodes(ctx.name(), true, true, false).forRemotes().nodes();
-        }
-    }
-
-    /**
      * Internal callable for global size calculation.
      */
     @GridInternal
-    private static class SizeCallable extends VersionAwareCallable {
+    private static class GlobalSizeCallable extends TopologyVersionAwareCallable {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -5000,7 +4925,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         /**
          * Required by {@link Externalizable}.
          */
-        public SizeCallable() {
+        public GlobalSizeCallable() {
             // No-op.
         }
 
@@ -5009,7 +4934,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
          * @param topVer Affinity topology version.
          * @param peekModes Cache peek modes.
          */
-        private SizeCallable(String cacheName, AffinityTopologyVersion topVer, CachePeekMode[] peekModes, boolean nearEnable) {
+        private GlobalSizeCallable(String cacheName, AffinityTopologyVersion topVer, CachePeekMode[] peekModes, boolean nearEnable) {
             super(cacheName, topVer);
 
             this.peekModes = peekModes;
@@ -5039,7 +4964,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         /** {@inheritDoc} */
         public String toString() {
-            return S.toString(SizeCallable.class, this);
+            return S.toString(GlobalSizeCallable.class, this);
         }
     }
 
@@ -5054,7 +4979,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
          * @param peekModes Peek modes.
          */
         public SizeFuture(CachePeekMode[] peekModes, GridCacheContext ctx, boolean near) {
-            super(ctx, new SizeCallable(ctx.name(), ctx.affinity().affinityTopologyVersion(), peekModes, near));
+            super(ctx, new GlobalSizeCallable(ctx.name(), ctx.affinity().affinityTopologyVersion(), peekModes, near));
         }
 
         /** {@inheritDoc} */
@@ -5079,7 +5004,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     private static class ClearFuture extends RetryFuture {
         /**
          */
-        public ClearFuture(GridCacheContext ctx, GlobalClearCallable clearCall) {
+        public ClearFuture(GridCacheContext ctx, TopologyVersionAwareCallable clearCall) {
             super(ctx, clearCall);
         }
 
@@ -5107,14 +5032,14 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         private final GridCacheContext ctx;
 
         /** Callable. */
-        private final VersionAwareCallable call;
+        private final TopologyVersionAwareCallable call;
 
         /** Max retries count before issuing an error. */
         private volatile int retries = 32;
 
         /**
          */
-        public RetryFuture(GridCacheContext ctx, VersionAwareCallable call) {
+        public RetryFuture(GridCacheContext ctx, TopologyVersionAwareCallable call) {
             this.ctx = ctx;
             this.call = call;
 
@@ -5750,7 +5675,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     /**
      * Delayed callable class.
      */
-    protected static abstract class VersionAwareCallable<K, V> implements Serializable, Callable<Object> {
+    protected static abstract class TopologyVersionAwareCallable<K, V> implements Serializable, Callable<Object> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -5767,14 +5692,14 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         /**
          * Empty constructor for serialization.
          */
-        public VersionAwareCallable() {
+        public TopologyVersionAwareCallable() {
             // No-op.
         }
 
         /**
          * @param topVer Affinity topology version.
          */
-        public VersionAwareCallable(String cacheName, AffinityTopologyVersion topVer) {
+        public TopologyVersionAwareCallable(String cacheName, AffinityTopologyVersion topVer) {
             this.cacheName = cacheName;
             this.topVer = topVer;
         }
