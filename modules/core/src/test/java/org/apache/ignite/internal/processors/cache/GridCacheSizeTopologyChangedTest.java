@@ -61,15 +61,15 @@ public class GridCacheSizeTopologyChangedTest extends GridCommonAbstractTest {
 
         CacheConfiguration ccfg = new CacheConfiguration();
 
-        ccfg.setAtomicityMode(ATOMIC);
+        ccfg.setAtomicityMode(ATOMIC);/*
 
         ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
 
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);*/
 
         ccfg.setCacheMode(PARTITIONED);
 
-        ccfg.setBackups(2);
+        ccfg.setBackups(1);
 
         cfg.setCacheConfiguration(defaultCacheConfiguration());
 
@@ -96,14 +96,27 @@ public class GridCacheSizeTopologyChangedTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {
-                int idx = 2;
                 while(!canceled.get()) {
+                    int idx = rnd.nextInt(GRIDS_CNT);
+
+                    if (idx > 0) {
+                        boolean state = status[idx];
+
+                        if (state) {
+                            System.out.println("!!! STOP GRID: " + idx);
                             stopGrid(idx);
+                        }
+                        else {
+                            System.out.println("!!! START GRID:" + idx);
+
                             startGrid(idx);
+                        }
+
+                        status[idx] = !state;
 
                         U.sleep(3000);
+                    }
                 }
-
                 return null;
             }
         });
