@@ -1118,17 +1118,11 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      */
     private void clearAll(long timeout, TopologyVersionAwareCallable clearCall) throws IgniteCheckedException {
         try {
-            // Send job to remote nodes only.
-            Collection<ClusterNode> nodes =
-                ctx.grid().cluster().forCacheNodes(name(), true, true, false).forRemotes().nodes();
-
             IgniteInternalFuture<Object> fut = null;
 
-            if (!nodes.isEmpty()) {
-                ctx.kernalContext().task().setThreadContext(TC_TIMEOUT, timeout);
+            ctx.kernalContext().task().setThreadContext(TC_TIMEOUT, timeout);
 
-                fut = new ClearFuture(ctx, clearCall);
-            }
+            fut = new ClearFuture(ctx, clearCall);
 
             if (fut != null)
                 fut.get();
