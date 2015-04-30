@@ -18,6 +18,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.*;
+import org.apache.ignite.cache.*;
 import org.apache.ignite.configuration.*;
 import org.apache.ignite.internal.*;
 import org.apache.ignite.internal.util.typedef.internal.*;
@@ -62,9 +63,13 @@ public class GridCacheSizeTopologyChangedTest extends GridCommonAbstractTest {
 
         ccfg.setAtomicityMode(ATOMIC);
 
+        ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
+
+        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+
         ccfg.setCacheMode(PARTITIONED);
 
-        ccfg.setBackups(1);
+        ccfg.setBackups(2);
 
         cfg.setCacheConfiguration(defaultCacheConfiguration());
 
@@ -91,27 +96,14 @@ public class GridCacheSizeTopologyChangedTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {
+                int idx = 2;
                 while(!canceled.get()) {
-                    int idx = rnd.nextInt(GRIDS_CNT);
-
-                    if (idx > 0) {
-                        boolean state = status[idx];
-
-                        if (state) {
-                            System.out.println("!!! STOP GRID: " + idx);
                             stopGrid(idx);
-                        }
-                        else {
-                            System.out.println("!!! START GRID:" + idx);
-
                             startGrid(idx);
-                        }
 
-                        status[idx] = !state;
-
-                        U.sleep(1000);
-                    }
+                        U.sleep(3000);
                 }
+
                 return null;
             }
         });
@@ -128,6 +120,13 @@ public class GridCacheSizeTopologyChangedTest extends GridCommonAbstractTest {
 
                 if (i % 1000 == 0)
                     System.out.println("!!! Keys added: " + i + ", size: " + size);
+
+
+
+                if (i % 1000 == 0) {
+                    U.sleep(1000);
+                    System.out.println("!!! Keys added: " + i + ", size: " + cache.size());
+                }
             }
 
             canceled.set(true);
