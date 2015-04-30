@@ -4965,6 +4965,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      */
     @GridInternal
     private static class GlobalRemoteClearKeySetCallable<K, V> extends GlobalClearKeySetCallable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /**
          * @param cacheName Cache name.
          * @param topVer Affinity topology version.
