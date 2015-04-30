@@ -124,7 +124,6 @@ public interface CacheMetrics {
      */
     public float getAverageTxRollbackTime();
 
-
     /**
      * Gets total number of transaction commits.
      *
@@ -154,6 +153,48 @@ public interface CacheMetrics {
     public long getOverflowSize();
 
     /**
+     * The total number of get requests to the off-heap memory.
+     *
+     * @return The number of gets.
+     */
+    public long getOffHeapGets();
+
+    /**
+     * The total number of put requests to the off-heap memory.
+     *
+     * @return The number of puts.
+     */
+    public long getOffHeapPuts();
+
+    /**
+     * The number of get requests that were satisfied by the off-heap memory.
+     *
+     * @return The off-heap hits number.
+     */
+    public long getOffHeapHits();
+
+    /**
+     * Gets the percentage of hits on off-heap memory.
+     *
+     * @return The percentage of hits on off-heap memory.
+     */
+    public float getOffHeapHitPercentage();
+
+    /**
+     * A miss is a get request that is not satisfied by off-heap memory.
+     *
+     * @return The off-heap misses number.
+     */
+    public long getOffHeapMisses();
+
+    /**
+     * Gets the percentage of misses on off-heap memory.
+     *
+     * @return The percentage of misses on off-heap memory.
+     */
+    public float getOffHeapMissPercentage();
+
+    /**
      * Gets number of entries stored in off-heap memory.
      *
      * @return Number of entries stored in off-heap memory.
@@ -161,11 +202,32 @@ public interface CacheMetrics {
     public long getOffHeapEntriesCount();
 
     /**
+     * Gets number of primary entries stored in off-heap memory.
+     *
+     * @return Number of primary entries stored in off-heap memory.
+     */
+    public long getOffHeapPrimaryEntriesCount();
+
+    /**
+     * Gets number of backup entries stored in off-heap memory.
+     *
+     * @return Number of backup entries stored in off-heap memory.
+     */
+    public long getOffHeapBackupEntriesCount();
+
+    /**
      * Gets memory size allocated in off-heap.
      *
      * @return Memory size allocated in off-heap.
      */
     public long getOffHeapAllocatedSize();
+
+    /**
+     * Gets off-heap memory maximum size.
+     *
+     * @return Off-heap memory maximum size.
+     */
+    public long getOffHeapMaxSize();
 
     /**
      * Gets number of non-{@code null} values in the cache.

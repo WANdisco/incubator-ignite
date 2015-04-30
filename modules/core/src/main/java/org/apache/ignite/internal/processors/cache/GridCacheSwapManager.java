@@ -395,8 +395,7 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
      * @return Reconstituted swap entry or {@code null} if entry is obsolete.
      * @throws IgniteCheckedException If failed.
      */
-    @Nullable private <X extends GridCacheSwapEntry> X swapEntry(X e) throws IgniteCheckedException
-    {
+    @Nullable private <X extends GridCacheSwapEntry> X swapEntry(X e) throws IgniteCheckedException {
         assert e != null;
 
         checkIteratorQueue();
@@ -480,6 +479,9 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
             // First check off-heap store.
             if (readOffheap && offheapEnabled) {
                 byte[] bytes = offheap.get(spaceName, part, key, keyBytes);
+
+                if (cctx.config().isStatisticsEnabled())
+                    cctx.cache().metrics0().onOffHeapRead(bytes != null);
 
                 if (bytes != null)
                     return swapEntry(unmarshalSwapEntry(bytes));
@@ -1007,6 +1009,9 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
         if (offheapEnabled) {
             offheap.put(spaceName, part, key, key.valueBytes(cctx.cacheObjectContext()), entry.marshal());
 
+            if (cctx.config().isStatisticsEnabled())
+                cctx.cache().metrics0().onOffHeapWrite();
+
             if (cctx.events().isRecordable(EVT_CACHE_OBJECT_TO_OFFHEAP))
                 cctx.events().addEvent(part, key, cctx.nodeId(), (IgniteUuid)null, null,
                     EVT_CACHE_OBJECT_TO_OFFHEAP, null, false, null, true, null, null, null);
@@ -1040,6 +1045,9 @@ public class GridCacheSwapManager extends GridCacheManagerAdapter {
                     swapEntry.key(),
                     swapEntry.key().valueBytes(cctx.cacheObjectContext()),
                     swapEntry.marshal());
+
+                if (cctx.config().isStatisticsEnabled())
+                    cctx.cache().metrics0().onOffHeapWrite();
 
                 if (cctx.events().isRecordable(EVT_CACHE_OBJECT_TO_OFFHEAP))
                     cctx.events().addEvent(swapEntry.partition(), swapEntry.key(), cctx.nodeId(),

@@ -49,13 +49,58 @@ class CacheMetricsMXBeanImpl implements CacheMetricsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public long getOffHeapGets() {
+        return cache.metrics0().getOffHeapGets();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getOffHeapPuts() {
+        return cache.metrics0().getOffHeapPuts();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getOffHeapHits() {
+        return cache.metrics0().getOffHeapHits();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getOffHeapHitPercentage() {
+        return cache.metrics0().getOffHeapHitPercentage();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getOffHeapMisses() {
+        return cache.metrics0().getOffHeapMisses();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getOffHeapMissPercentage() {
+        return cache.metrics0().getOffHeapMissPercentage();
+    }
+
+    /** {@inheritDoc} */
     @Override public long getOffHeapEntriesCount() {
         return cache.metrics0().getOffHeapEntriesCount();
     }
 
     /** {@inheritDoc} */
+    @Override public long getOffHeapPrimaryEntriesCount() {
+        return cache.metrics0().getOffHeapPrimaryEntriesCount();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getOffHeapBackupEntriesCount() {
+        return cache.metrics0().getOffHeapBackupEntriesCount();
+    }
+
+    /** {@inheritDoc} */
     @Override public long getOffHeapAllocatedSize() {
         return cache.metrics0().getOffHeapAllocatedSize();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getOffHeapMaxSize() {
+        return cache.metrics0().getOffHeapMaxSize();
     }
 
     /** {@inheritDoc} */
