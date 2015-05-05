@@ -21,6 +21,7 @@ import org.apache.ignite.cache.*;
 import org.apache.ignite.configuration.*;
 import org.apache.ignite.igfs.*;
 import org.apache.ignite.spi.discovery.tcp.*;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.*;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.*;
 import org.apache.ignite.testframework.junits.common.*;
 
@@ -31,6 +32,9 @@ import static org.apache.ignite.cache.CacheMode.*;
  * Test for igfs with incorrect configuration.
  */
 public class IgfsClientCacheSelfTest  extends GridCommonAbstractTest {
+    /** */
+    private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
+
     /** Meta-information cache name. */
     private static final String META_CACHE_NAME = "meta";
 
@@ -50,11 +54,11 @@ public class IgfsClientCacheSelfTest  extends GridCommonAbstractTest {
         if (!gridName.equals(getTestGridName(0)))
             cfg.setClientMode(true);
 
-        TcpDiscoverySpi discoSpi = new TcpDiscoverySpi();
+        TcpDiscoverySpi disco = new TcpDiscoverySpi();
 
-        discoSpi.setIpFinder(new TcpDiscoveryVmIpFinder(true));
+        disco.setIpFinder(IP_FINDER);
 
-        cfg.setDiscoverySpi(discoSpi);
+        cfg.setDiscoverySpi(disco);
 
         FileSystemConfiguration igfsCfg = new FileSystemConfiguration();
 
