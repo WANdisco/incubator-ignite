@@ -3600,7 +3600,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 int size = 0;
 
                 for (ComputeJobResult res : results) {
-                    if (res.getException() == null)
+                    if (res.getException() == null && res != null)
                         size += res.<Integer>getData();
                 }
 
@@ -5583,9 +5583,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         @Nullable @Override public final Object execute() {
             waitAffinityReadyFuture();
 
-            localExecute();
-
-            return null;
+            return localExecute();
         }
 
         /**
