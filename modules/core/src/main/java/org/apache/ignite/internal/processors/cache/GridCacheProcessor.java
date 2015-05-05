@@ -607,7 +607,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             boolean template = cfg.getName() != null && cfg.getName().endsWith("*");
 
-            DynamicCacheDescriptor desc = new DynamicCacheDescriptor(cfg, cacheType, template, IgniteUuid.randomUuid());
+            DynamicCacheDescriptor desc = new DynamicCacheDescriptor(ctx, cfg, cacheType, template,
+                IgniteUuid.randomUuid());
 
             desc.locallyConfigured(true);
             desc.staticallyConfigured(true);
@@ -635,7 +636,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             if (cfg.getName() == null) { // Use cache configuration with null name as template.
                 DynamicCacheDescriptor desc0 =
-                    new DynamicCacheDescriptor(cfg, cacheType, true, IgniteUuid.randomUuid());
+                    new DynamicCacheDescriptor(ctx, cfg, cacheType, true, IgniteUuid.randomUuid());
 
                 desc0.locallyConfigured(true);
                 desc0.staticallyConfigured(true);
@@ -662,17 +663,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         ClusterNode locNode = ctx.discovery().localNode();
 
-        // Init cache plugin managers.
-        final Map<String, CachePluginManager> cache2PluginMgr = new HashMap<>();
-
-        for (DynamicCacheDescriptor desc : registeredCaches.values()) {
-            CacheConfiguration locCcfg = desc.cacheConfiguration();
-
-            CachePluginManager pluginMgr = new CachePluginManager(ctx, locCcfg);
-
-            cache2PluginMgr.put(locCcfg.getName(), pluginMgr);
-        }
-
         if (!getBoolean(IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK)) {
             for (ClusterNode n : ctx.discovery().remoteNodes()) {
                 checkTransactionConfiguration(n);
@@ -692,9 +682,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                         checkCache(locCfg, rmtCfg, n);
 
                         // Check plugin cache configurations.
-                        CachePluginManager pluginMgr = cache2PluginMgr.get(locCfg.getName());
-
-                        assert pluginMgr != null : " Map=" + cache2PluginMgr;
+                        CachePluginManager pluginMgr = desc.pluginManager();
 
                         pluginMgr.validateRemotes(rmtCfg, n);
                     }
@@ -717,9 +705,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (filter.apply(locNode)) {
                 CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(ccfg);
 
-                CachePluginManager pluginMgr = cache2PluginMgr.get(ccfg.getName());
-
-                assert pluginMgr != null : " Map=" + cache2PluginMgr;
+                CachePluginManager pluginMgr = desc.pluginManager();
 
                 GridCacheContext ctx = createCache(ccfg, pluginMgr, desc.cacheType(), cacheObjCtx);
 
@@ -1640,6 +1626,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                     if (existing == null) {
                         DynamicCacheDescriptor desc = new DynamicCacheDescriptor(
+                            ctx,
                             ccfg,
                             req.cacheType(),
                             true,
@@ -1673,6 +1660,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                         assert req.cacheType() != null : req;
 
                         DynamicCacheDescriptor desc = new DynamicCacheDescriptor(
+                            ctx,
                             ccfg,
                             req.cacheType(),
                             false,
@@ -2022,7 +2010,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 if (desc == null) {
                     DynamicCacheDescriptor templateDesc =
-                        new DynamicCacheDescriptor(ccfg, req.cacheType(), true, req.deploymentId());
+                        new DynamicCacheDescriptor(ctx, ccfg, req.cacheType(), true, req.deploymentId());
 
                     DynamicCacheDescriptor old = registeredTemplates.put(maskNull(ccfg.getName()), templateDesc);
 
@@ -2076,7 +2064,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     assert req.cacheType() != null : req;
 
                     DynamicCacheDescriptor startDesc =
-                        new DynamicCacheDescriptor(ccfg, req.cacheType(), false, req.deploymentId());
+                        new DynamicCacheDescriptor(ctx, ccfg, req.cacheType(), false, req.deploymentId());
 
                     DynamicCacheDescriptor old = registeredCaches.put(maskNull(ccfg.getName()), startDesc);
 
