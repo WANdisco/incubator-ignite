@@ -1129,9 +1129,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (!nodes.nodes().isEmpty()) {
             ctx.kernalContext().task().setThreadContext(TC_TIMEOUT, timeout);
 
-            ctx.grid().context().task().setThreadContext(TC_SUBGRID, nodes);
+            ctx.kernalContext().task().setThreadContext(TC_SUBGRID, nodes);
 
-            ctx.grid().context().task().execute(new ComputeTaskAdapter<Object, Object>() {
+            ctx.kernalContext().task().execute(new ComputeTaskAdapter<Object, Object>() {
                 /** {@inheritDoc} */
                 @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
                     @Nullable Object arg) throws IgniteException {
@@ -1163,9 +1163,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         Collection<ClusterNode> nodes = ctx.grid().cluster().forCacheNodes(name(), true, true, false).nodes();
 
         if (!nodes.isEmpty()) {
-            ctx.grid().context().task().setThreadContext(TC_SUBGRID, nodes);
+            ctx.kernalContext().task().setThreadContext(TC_SUBGRID, nodes);
 
-            return ctx.grid().context().task().execute(new ComputeTaskAdapter<Object, Object>() {
+            return ctx.kernalContext().task().execute(new ComputeTaskAdapter<Object, Object>() {
                 /** {@inheritDoc} */
                 @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
                                                                   @Nullable Object arg) throws IgniteException {
@@ -3581,9 +3581,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (nodes.isEmpty())
             return new GridFinishedFuture<>(0);
 
-        ctx.grid().context().task().setThreadContext(TC_SUBGRID, nodes);
+        ctx.kernalContext().task().setThreadContext(TC_SUBGRID, nodes);
 
-        return ctx.grid().context().task().execute(new ComputeTaskAdapter<Object, Integer>() {
+        return ctx.kernalContext().task().execute(new ComputeTaskAdapter<Object, Integer>() {
 
             /** {@inheritDoc} */
             @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
