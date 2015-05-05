@@ -1128,29 +1128,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
             ctx.kernalContext().task().setThreadContext(TC_SUBGRID, nodes);
 
-            ctx.kernalContext().task().execute(new ComputeTaskAdapter<Object, Object>() {
-                @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-                    @Nullable Object arg) throws IgniteException {
-                    Map<ComputeJob, ClusterNode> jobs = new HashMap();
-
-                    for (ClusterNode node : subgrid) {
-                        jobs.put(keys == null ?
-                            new GlobalClearAllJob(name(), ctx.affinity().affinityTopologyVersion()) :
-                            new GlobalClearKeySetJob<K>(name(), ctx.affinity().affinityTopologyVersion(), keys),
-                            node);
-                    }
-
-                    return jobs;
-                }
-
-                @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
-                    return ComputeJobResultPolicy.WAIT;
-                }
-
-                @Nullable @Override public Object reduce(List<ComputeJobResult> results) throws IgniteException {
-                    return null;
-                }
-            }, null).get();
+            ctx.kernalContext().task().execute(new ClearTask(ctx, keys), null).get();
         }
     }
 
@@ -1169,29 +1147,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (!nodes.isEmpty()) {
             ctx.kernalContext().task().setThreadContext(TC_SUBGRID, nodes);
 
-            return ctx.kernalContext().task().execute(new ComputeTaskAdapter<Object, Object>() {
-                @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-                    @Nullable Object arg) throws IgniteException {
-                    Map<ComputeJob, ClusterNode> jobs = new HashMap();
-
-                    for (ClusterNode node : subgrid) {
-                        jobs.put(keys == null ?
-                            new GlobalClearAllJob(name(), ctx.affinity().affinityTopologyVersion()) :
-                            new GlobalClearKeySetJob<K>(name(), ctx.affinity().affinityTopologyVersion(), keys),
-                            node);
-                    }
-
-                    return jobs;
-                }
-
-                @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
-                    return ComputeJobResultPolicy.WAIT;
-                }
-
-                @Nullable @Override public Object reduce(List<ComputeJobResult> results) throws IgniteException {
-                    return null;
-                }
-            }, null);
+            return ctx.kernalContext().task().execute(new ClearTask(ctx, keys), null);
         }
         else
             return new GridFinishedFuture<>();
@@ -3594,32 +3550,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         ctx.kernalContext().task().setThreadContext(TC_SUBGRID, nodes);
 
-        return ctx.kernalContext().task().execute(new ComputeTaskAdapter<Object, Integer>() {
-            @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-                @Nullable Object arg) throws IgniteException {
-                Map<ComputeJob, ClusterNode> jobs = new HashMap();
-
-                for (ClusterNode node : subgrid)
-                    jobs.put(new SizeJob(ctx.name(), ctx.affinity().affinityTopologyVersion(), peekModes), node);
-
-                return jobs;
-            }
-
-            @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
-                return ComputeJobResultPolicy.WAIT;
-            }
-
-            @Nullable @Override public Integer reduce(List<ComputeJobResult> results) throws IgniteException {
-                int size = 0;
-
-                for (ComputeJobResult res : results) {
-                    if (res.getException() == null && res != null)
-                        size += res.<Integer>getData();
-                }
-
-                return size;
-            }
-        }, null);
+        return ctx.kernalContext().task().execute(new SizeTask(ctx, peekModes), null);
     }
 
     /** {@inheritDoc} */
@@ -5631,6 +5562,118 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     jobCtx.holdcc();
                 }
             }
+        }
+    }
+
+    /**
+     * Size task.
+     */
+    private static class SizeTask extends ComputeTaskAdapter<Object, Integer> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Cache context. */
+        private GridCacheContext ctx;
+
+        /** Peek modes. */
+        private CachePeekMode[] peekModes;
+
+        /**
+         * Empty constructor for serialization.
+         */
+        public SizeTask() {
+            // No-op.
+        }
+
+        /**
+         * @param ctx Cache context.
+         */
+        public SizeTask(GridCacheContext ctx, CachePeekMode[] peekModes) {
+            this.ctx = ctx;
+            this.peekModes = peekModes;
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+            @Nullable Object arg) throws IgniteException {
+            Map<ComputeJob, ClusterNode> jobs = new HashMap();
+
+            for (ClusterNode node : subgrid)
+                jobs.put(new SizeJob(ctx.name(), ctx.affinity().affinityTopologyVersion(), peekModes), node);
+
+            return jobs;
+        }
+
+        /** {@inheritDoc} */
+        @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
+            return ComputeJobResultPolicy.WAIT;
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public Integer reduce(List<ComputeJobResult> results) throws IgniteException {
+            int size = 0;
+
+            for (ComputeJobResult res : results) {
+                if (res.getException() == null && res != null)
+                    size += res.<Integer>getData();
+            }
+
+            return size;
+        }
+    }
+
+    /**
+     * Clear task.
+     */
+    private static class ClearTask<K> extends ComputeTaskAdapter<Object, Object> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Cache context. */
+        private GridCacheContext ctx;
+
+        /** Keys to clear. */
+        private Set<? extends K> keys;
+
+        /**
+         * Empty constructor for serialization.
+         */
+        public ClearTask() {
+            // No-op.
+        }
+
+        /**
+         * @param ctx Cache context.
+         * @param keys Keys to clear.
+         */
+        public ClearTask(GridCacheContext ctx, Set<? extends K> keys) {
+            this.ctx = ctx;
+            this.keys = keys;
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+            @Nullable Object arg) throws IgniteException {
+            Map<ComputeJob, ClusterNode> jobs = new HashMap();
+
+            for (ClusterNode node : subgrid) {
+                jobs.put(keys == null ?
+                        new GlobalClearAllJob(ctx.name(), ctx.affinity().affinityTopologyVersion()) :
+                        new GlobalClearKeySetJob<K>(ctx.name(), ctx.affinity().affinityTopologyVersion(), keys),
+                    node);
+            }
+
+            return jobs;
+        }
+
+        /** {@inheritDoc} */
+        @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
+            return ComputeJobResultPolicy.WAIT;
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public Object reduce(List<ComputeJobResult> results) throws IgniteException {
+            return null;
         }
     }
 }
