@@ -31,9 +31,9 @@ import static org.apache.ignite.cache.CacheAtomicityMode.*;
 import static org.apache.ignite.cache.CacheMode.*;
 
 /**
- * Test for igfs with incorrect configuration.
+ * Test for igfs with nodes in client mode (see {@link IgniteConfiguration#setClientMode(boolean)}.
  */
-public class IgfsClientCacheSelfTest  extends IgfsAbstractSelfTest {
+public class IgfsClientCacheSelfTest extends IgfsAbstractSelfTest {
     /** */
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
 
@@ -66,7 +66,7 @@ public class IgfsClientCacheSelfTest  extends IgfsAbstractSelfTest {
     protected IgfsSecondaryFileSystem createSecondaryFileSystemStack() throws Exception {
         Ignite igniteSecondary = G.start(getConfiguration(getTestGridName(0)));
 
-        IgfsEx secondaryIgfsImpl = (IgfsEx) igniteSecondary.fileSystem("igfs");
+        IgfsEx secondaryIgfsImpl = (IgfsEx)igniteSecondary.fileSystem("igfs");
 
         igfsSecondary = new IgfsExUniversalFileSystemAdapter(secondaryIgfsImpl);
 
