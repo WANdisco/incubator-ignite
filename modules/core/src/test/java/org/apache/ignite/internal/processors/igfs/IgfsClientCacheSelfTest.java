@@ -17,21 +17,23 @@
 
 package org.apache.ignite.internal.processors.igfs;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.*;
 import org.apache.ignite.configuration.*;
 import org.apache.ignite.igfs.*;
+import org.apache.ignite.igfs.secondary.IgfsSecondaryFileSystem;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.spi.discovery.tcp.*;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.*;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.*;
-import org.apache.ignite.testframework.junits.common.*;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.*;
 import static org.apache.ignite.cache.CacheMode.*;
 
 /**
- * Test for igfs with incorrect configuration.
+ * Test for igfs with nodes in client mode (see {@link IgniteConfiguration#setClientMode(boolean)}.
  */
-public class IgfsClientCacheSelfTest  extends GridCommonAbstractTest {
+public class IgfsClientCacheSelfTest extends IgfsAbstractSelfTest {
     /** */
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
 
@@ -44,8 +46,40 @@ public class IgfsClientCacheSelfTest  extends GridCommonAbstractTest {
     /** Regular cache name. */
     private static final String CACHE_NAME = "cache";
 
+    /**
+     * Constructor.
+     */
+    public IgfsClientCacheSelfTest() {
+        super(IgfsMode.PRIMARY);
+    }
+
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
+        igfsSecondaryFileSystem = createSecondaryFileSystemStack();
+
+        Ignite ignite1 = G.start(getConfiguration(getTestGridName(1)));
+
+        igfs = (IgfsImpl) ignite1.fileSystem("igfs");
+    }
+
+    /**{@inheritDoc} */
+    protected IgfsSecondaryFileSystem createSecondaryFileSystemStack() throws Exception {
+        Ignite igniteSecondary = G.start(getConfiguration(getTestGridName(0)));
+
+        IgfsEx secondaryIgfsImpl = (IgfsEx)igniteSecondary.fileSystem("igfs");
+
+        igfsSecondary = new IgfsExUniversalFileSystemAdapter(secondaryIgfsImpl);
+
+        return secondaryIgfsImpl.asSecondary();
+    }
+
+    /**
+     *
+     * @param gridName Grid name.
+     * @return Ignite configuration.
+     * @throws Exception If failed.
+     */
+    protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         cfg.setCacheConfiguration(cacheConfiguration(META_CACHE_NAME), cacheConfiguration(DATA_CACHE_NAME),
@@ -71,7 +105,10 @@ public class IgfsClientCacheSelfTest  extends GridCommonAbstractTest {
         return cfg;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @param cacheName Cache name.
+     * @return Cache configuration.
+     */
     protected CacheConfiguration cacheConfiguration(String cacheName) {
         CacheConfiguration cacheCfg = defaultCacheConfiguration();
 
@@ -91,22 +128,5 @@ public class IgfsClientCacheSelfTest  extends GridCommonAbstractTest {
         cacheCfg.setAtomicityMode(TRANSACTIONAL);
 
         return cacheCfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    public void testStartIgfs() throws Exception {
-        startGrids(2);
     }
 }

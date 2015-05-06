@@ -2448,26 +2448,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /**
      * @param name Cache name.
-     * @param <K> type of keys.
-     * @param <V> type of values.
      * @return Cache instance for given name.
+     * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("unchecked")
-    public <K, V> IgniteInternalCache<K, V> getOrStartCache(@Nullable String name) {
-        try {
-            if (log.isDebugEnabled())
-                log.debug("Getting cache for name: " + name);
+    public <K, V> IgniteInternalCache<K, V> getOrStartCache(@Nullable String name) throws IgniteCheckedException {
+        if (log.isDebugEnabled())
+            log.debug("Getting cache for name: " + name);
 
-            IgniteCache<K, V> jcache = (IgniteCache<K, V>)jCacheProxies.get(maskNull(name));
+        IgniteCache<K, V> jcache = (IgniteCache<K, V>)jCacheProxies.get(maskNull(name));
 
-            if (jcache == null)
-                jcache = startJCache(name, true);
+        if (jcache == null)
+            jcache = startJCache(name, true);
 
-            return jcache == null ? null : ((IgniteCacheProxy<K, V>)jcache).internalProxy();
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
+        return jcache == null ? null : ((IgniteCacheProxy<K, V>)jcache).internalProxy();
     }
 
     /**
