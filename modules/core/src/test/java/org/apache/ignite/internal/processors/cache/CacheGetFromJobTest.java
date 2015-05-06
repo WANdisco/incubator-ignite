@@ -18,7 +18,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.*;
-import org.apache.ignite.configuration.*;
 import org.apache.ignite.internal.*;
 import org.apache.ignite.internal.util.typedef.*;
 import org.apache.ignite.lang.*;
@@ -28,34 +27,17 @@ import org.apache.ignite.testframework.*;
 import java.util.concurrent.atomic.*;
 
 /**
- * Job try to get cache.
+ * Job tries to get cache during topology change.
  */
 public class CacheGetFromJobTest extends GridCacheAbstractSelfTest {
-    private static final String CACHE_NAME = null;
     /** {@inheritDoc} */
     @Override protected int gridCount() {
         return 1;
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        startGrid();
-
-        super.beforeTest();
-    }
-
-    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected CacheConfiguration cacheConfiguration(String gridName) throws Exception {
-        CacheConfiguration cfg = super.cacheConfiguration(gridName);
-
-        cfg.setName(CACHE_NAME);
-
-        return cfg;
     }
 
     /**
@@ -72,7 +54,7 @@ public class CacheGetFromJobTest extends GridCacheAbstractSelfTest {
 
                 try {
                     for (int i = 0; i < 5; i++) {
-                        info("Topology change " + i);
+                        info("Topology change: " + i);
 
                         startGrid(id.getAndIncrement());
                     }
@@ -85,8 +67,15 @@ public class CacheGetFromJobTest extends GridCacheAbstractSelfTest {
             }
         }, 3, "topology-change-thread");
 
-        while (!fut.isDone())
+        int cntr = 0;
+
+        while (!fut.isDone()) {
             grid(0).compute().broadcast(new TestJob());
+
+            cntr++;
+        }
+
+        log.info("Job execution count: " + cntr);
 
         Exception err0 = err.get();
 
@@ -109,7 +98,11 @@ public class CacheGetFromJobTest extends GridCacheAbstractSelfTest {
 
         /** {@inheritDoc} */
         @Override public Object call() throws Exception {
-            assert ignite.cache(CACHE_NAME) != null;
+            IgniteCache cache = ignite.cache(null);
+
+            assertNotNull(cache);
+
+            assertEquals(0, cache.localSize());
 
             return null;
         }

@@ -125,7 +125,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private Marshaller marshaller = new JdkMarshaller();
 
     /** Count down latch for caches. */
-    private CountDownLatch cacheStartedLatch = new CountDownLatch(1);
+    private final CountDownLatch cacheStartedLatch = new CountDownLatch(1);
 
     /**
      * @param ctx Kernal context.
